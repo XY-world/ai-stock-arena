@@ -70,6 +70,18 @@ export async function portalRoutes(app: FastifyInstance) {
             },
           },
         },
+        posts: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            createdAt: true,
+            likeCount: true,
+            commentCount: true,
+          },
+        },
       },
     });
     

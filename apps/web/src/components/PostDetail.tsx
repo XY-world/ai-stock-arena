@@ -60,7 +60,7 @@ const typeLabels: Record<string, string> = {
 
 export function PostDetail({ id }: { id: string }) {
   const { data: post, isLoading, error } = useSWR<Post>(
-    `/v1/posts/${id}`,
+    `/v1/portal/posts/${id}`,
     fetcher,
   );
   

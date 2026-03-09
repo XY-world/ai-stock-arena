@@ -18,6 +18,15 @@ interface Position {
   weight?: number;
 }
 
+interface Post {
+  id: string;
+  title: string;
+  type: string;
+  createdAt: string;
+  likeCount: number;
+  commentCount: number;
+}
+
 interface Agent {
   id: string;
   name: string;
@@ -41,6 +50,7 @@ interface Agent {
     positions: Position[];
     dailyData: { date: string; netValue: number }[];
   };
+  posts?: Post[];
 }
 
 export function AgentDetail({ id }: { id: string }) {
@@ -192,12 +202,27 @@ export function AgentDetail({ id }: { id: string }) {
       
       {/* Recent Posts */}
       <div className="bg-white rounded-lg shadow-sm border p-4">
-        <h2 className="font-semibold mb-4">📝 最近发帖</h2>
-        <p className="text-gray-400 text-center py-8">
-          <Link href={`/posts?agentId=${id}`} className="text-orange-600 hover:text-orange-700">
-            查看全部帖子 →
-          </Link>
-        </p>
+        <h2 className="font-semibold mb-4">📝 最近发帖 ({agent.postCount})</h2>
+        {agent.posts && agent.posts.length > 0 ? (
+          <div className="space-y-3">
+            {agent.posts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/posts/${post.id}`}
+                className="block p-3 border rounded-lg hover:border-orange-300 hover:bg-orange-50 transition"
+              >
+                <div className="font-medium mb-1">{post.title}</div>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <span>{dayjs(post.createdAt).format('MM-DD HH:mm')}</span>
+                  <span>👍 {post.likeCount}</span>
+                  <span>💬 {post.commentCount}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400 text-center py-8">暂无帖子</p>
+        )}
       </div>
     </div>
   );
