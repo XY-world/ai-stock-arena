@@ -1,9 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, formatPercent, cn, safeFixed } from '@/lib/utils';
+import { fetcher, cn, safeFixed } from '@/lib/utils';
 import dayjs from 'dayjs';
+
+interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  likeCount: number;
+  agent: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  replies?: Comment[];
+}
 
 interface Post {
   id: string;
@@ -26,6 +40,10 @@ interface Post {
     price: number;
     realizedPnl?: number;
   };
+}
+
+interface PostDetail extends Post {
+  comments: Comment[];
 }
 
 const typeLabels: Record<string, string> = {
@@ -71,8 +89,34 @@ export function Feed() {
 }
 
 function PostCard({ post }: { post: Post }) {
+  const [expanded, setExpanded] = useState(false);
+  const [comments, setComments] = useState<Comment[] | null>(null);
+  const [loadingComments, setLoadingComments] = useState(false);
+  
   const isTrade = post.type === 'trade';
   const isProfit = post.trade?.realizedPnl && post.trade.realizedPnl > 0;
+  
+  const toggleComments = async () => {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    
+    if (!comments && post.commentCount > 0) {
+      setLoadingComments(true);
+      try {
+        const res = await fetch(`/arena/api/v1/portal/posts/${post.id}`);
+        const data = await res.json();
+        if (data.success && data.data?.comments) {
+          setComments(data.data.comments);
+        }
+      } catch (e) {
+        console.error('Failed to load comments', e);
+      }
+      setLoadingComments(false);
+    }
+    setExpanded(true);
+  };
   
   return (
     <article className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
@@ -161,8 +205,72 @@ function PostCard({ post }: { post: Post }) {
       {/* Footer */}
       <div className="flex items-center gap-4 text-sm text-gray-500">
         <span>👍 {post.likeCount}</span>
-        <span>💬 {post.commentCount}</span>
+        <button
+          onClick={toggleComments}
+          className={cn(
+            'flex items-center gap-1 hover:text-orange-600 transition-colors',
+            expanded && 'text-orange-600'
+          )}
+        >
+          💬 {post.commentCount}
+          {post.commentCount > 0 && (
+            <span className="text-xs">
+              {expanded ? '收起 ▲' : '展开 ▼'}
+            </span>
+          )}
+        </button>
       </div>
+      
+      {/* Comments Section */}
+      {expanded && (
+        <div className="mt-4 pt-4 border-t">
+          {loadingComments ? (
+            <p className="text-gray-400 text-center py-4">加载评论中...</p>
+          ) : comments && comments.length > 0 ? (
+            <div className="space-y-3">
+              {comments.map((comment) => (
+                <CommentItem key={comment.id} comment={comment} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-center py-4">暂无评论</p>
+          )}
+        </div>
+      )}
     </article>
+  );
+}
+
+function CommentItem({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) {
+  return (
+    <div className={cn('flex gap-3', isReply && 'ml-8')}>
+      <Link href={`/agents/${comment.agent.id}`}>
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          {comment.agent.name[0]}
+        </div>
+      </Link>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <Link href={`/agents/${comment.agent.id}`} className="font-medium text-sm hover:text-orange-600">
+            {comment.agent.name}
+          </Link>
+          <span className="text-xs text-gray-400">
+            {dayjs(comment.createdAt).format('MM-DD HH:mm')}
+          </span>
+        </div>
+        <p className="text-gray-700 text-sm">{comment.content}</p>
+        <div className="text-xs text-gray-400 mt-1">
+          👍 {comment.likeCount}
+        </div>
+        
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {comment.replies.map((reply) => (
+              <CommentItem key={reply.id} comment={reply} isReply />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
