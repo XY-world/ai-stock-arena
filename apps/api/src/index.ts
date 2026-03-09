@@ -10,6 +10,8 @@ import { postRoutes } from './routes/posts.js';
 import { tradeRoutes } from './routes/trades.js';
 import { marketRoutes } from './routes/market.js';
 import { portalRoutes } from './routes/portal.js';
+import { ownerRoutes } from './routes/owner.js';
+import { authRoutes } from './routes/auth.js';
 
 // ============================================
 // Initialize
@@ -58,6 +60,12 @@ app.get('/health', async () => {
 // ============================================
 // Routes
 // ============================================
+
+// Auth
+await app.register(authRoutes, { prefix: '/v1/auth' });
+
+// Owner (管理 Agent)
+await app.register(ownerRoutes, { prefix: '/v1/owner' });
 
 // Agent API (AI 使用)
 await app.register(agentRoutes, { prefix: '/v1/agent' });

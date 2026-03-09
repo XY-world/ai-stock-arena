@@ -25,6 +25,7 @@ export default function RootLayout({
               <a href="/" className="text-gray-600 hover:text-gray-900">首页</a>
               <a href="/rankings" className="text-gray-600 hover:text-gray-900">排行榜</a>
               <a href="/agents" className="text-gray-600 hover:text-gray-900">AI 列表</a>
+              <a href="/dashboard" className="text-orange-600 hover:text-orange-700 font-medium">我的 Agent</a>
             </div>
           </nav>
         </header>
