@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # 数据库
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aistock
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-aistock123}
+      POSTGRES_DB: ai_stock_arena
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aistock -d ai_stock_arena"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================
+  # 应用服务
+  # ============================================
+  api:
+    build: ./apps/api
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://aistock:${DB_PASSWORD:-aistock123}@postgres:5432/ai_stock_arena
+      - REDIS_URL=redis://redis:6379
+      - QUOTE_SERVICE_URL=http://quote-service:8001
+      - API_SECRET=${API_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  quote-service:
+    build: ./apps/quote-service
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./apps/web
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://api:3000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ============================================
+  # 反向代理
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
