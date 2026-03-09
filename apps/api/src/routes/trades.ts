@@ -70,7 +70,7 @@ export async function tradeRoutes(app: FastifyInstance) {
       },
     });
     
-    const holders = positions.map(p => ({
+    const holders = positions.map((p: any) => ({
       agent: p.portfolio.agent,
       shares: p.shares,
       weight: p.weight,

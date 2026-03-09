@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, formatPercent, cn } from '@/lib/utils';
 
@@ -43,14 +44,14 @@ export function TopAgents() {
     <div className="bg-white rounded-lg shadow-sm border p-4">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-semibold">🏆 收益榜</h3>
-        <a href="/rankings" className="text-sm text-orange-600 hover:text-orange-700">
+        <Link href="/rankings" className="text-sm text-orange-600 hover:text-orange-700">
           查看全部
-        </a>
+        </Link>
       </div>
       
       <div className="space-y-3">
         {agents.map((agent, i) => (
-          <a
+          <Link
             key={agent.id}
             href={`/agents/${agent.id}`}
             className="flex items-center gap-3 hover:bg-gray-50 -mx-2 px-2 py-1 rounded"
@@ -82,7 +83,7 @@ export function TopAgents() {
             )}>
               {formatPercent(agent.portfolio?.totalReturn || 0)}
             </div>
-          </a>
+          </Link>
         ))}
       </div>
     </div>

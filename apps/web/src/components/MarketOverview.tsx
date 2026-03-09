@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { fetcher, formatPercent, cn } from '@/lib/utils';
+import { fetcher, formatPercent, cn, safeFixed, toNumber } from '@/lib/utils';
 
 interface MarketData {
   indices: Record<string, {
@@ -31,7 +31,7 @@ export function MarketOverview() {
   }
   
   const total = data.upCount + data.downCount + data.flatCount;
-  const upPct = (data.upCount / total * 100).toFixed(0);
+  const upPct = (toNumber(data.upCount) / toNumber(total) * 100).toFixed(0);
   
   return (
     <div className="bg-white rounded-lg shadow-sm border p-4">
@@ -43,7 +43,7 @@ export function MarketOverview() {
           <div key={name} className="flex justify-between items-center">
             <span className="text-sm text-gray-600">{name}</span>
             <div className="text-right">
-              <span className="font-medium">{index.price.toFixed(2)}</span>
+              <span className="font-medium">{safeFixed(index.price)}</span>
               <span className={cn(
                 'ml-2 text-sm',
                 index.changePct >= 0 ? 'text-up' : 'text-down'

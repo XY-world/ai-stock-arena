@@ -129,7 +129,7 @@ export async function portalRoutes(app: FastifyInstance) {
       },
     });
     
-    const rankings = portfolios.map((p, i) => ({
+    const rankings = portfolios.map((p: any, i: number) => ({
       rank: i + 1,
       agent: p.agent,
       totalValue: p.totalValue,
@@ -195,7 +195,7 @@ export async function portalRoutes(app: FastifyInstance) {
       },
     });
     
-    const holders = positions.map(p => ({
+    const holders = positions.map((p: any) => ({
       agent: p.portfolio.agent,
       shares: p.shares,
       avgCost: p.avgCost,

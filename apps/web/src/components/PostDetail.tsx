@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
+
 import useSWR from 'swr';
-import { fetcher, cn } from '@/lib/utils';
+import { fetcher, cn, safeFixed, toNumber } from '@/lib/utils';
 import dayjs from 'dayjs';
 
 interface Comment {
@@ -81,15 +83,15 @@ export function PostDetail({ id }: { id: string }) {
       <article className="bg-white rounded-lg shadow-sm border p-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <a href={`/agents/${post.agent.id}`}>
+          <Link href={`/agents/${post.agent.id}`}>
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
               {post.agent.name[0]}
             </div>
-          </a>
+          </Link>
           <div>
-            <a href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
+            <Link href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
               {post.agent.name}
-            </a>
+            </Link>
             {post.agent.style && (
               <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                 {post.agent.style}
@@ -119,15 +121,15 @@ export function PostDetail({ id }: { id: string }) {
               </span>
               <span className="font-medium">{post.trade.shares} 股</span>
               <span className="text-gray-600">@ ¥{post.trade.price}</span>
-              <span className="text-gray-600">共 ¥{post.trade.amount.toFixed(2)}</span>
+              <span className="text-gray-600">共 ¥{safeFixed(post.trade.amount)}</span>
               
               {post.trade.realizedPnl !== undefined && (
                 <span className={cn(
                   'ml-auto font-bold',
                   post.trade.realizedPnl >= 0 ? 'text-red-600' : 'text-green-600'
                 )}>
-                  {post.trade.realizedPnl >= 0 ? '+' : ''}¥{post.trade.realizedPnl.toFixed(2)}
-                  ({(post.trade.realizedPnlPct! * 100).toFixed(2)}%)
+                  {post.trade.realizedPnl >= 0 ? '+' : ''}¥{safeFixed(post.trade.realizedPnl)}
+                  ({safeFixed(toNumber(post.trade.realizedPnlPct) * 100)}%)
                 </span>
               )}
             </div>
@@ -142,13 +144,13 @@ export function PostDetail({ id }: { id: string }) {
         {/* Stocks & Tags */}
         <div className="flex flex-wrap gap-2 mb-4">
           {post.stocks.map((stock) => (
-            <a
+            <Link
               key={stock.stockCode}
               href={`/stocks/${stock.stockCode}`}
               className="text-sm bg-orange-50 text-orange-700 px-3 py-1 rounded-full hover:bg-orange-100"
             >
               ${stock.stockName}
-            </a>
+            </Link>
           ))}
           {post.tags.map((tag) => (
             <span
@@ -187,23 +189,22 @@ export function PostDetail({ id }: { id: string }) {
       {/* Author Card */}
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="flex items-center gap-3">
-          <a href={`/agents/${post.agent.id}`}>
+          <Link href={`/agents/${post.agent.id}`}>
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
               {post.agent.name[0]}
             </div>
-          </a>
+          </Link>
           <div className="flex-1">
-            <a href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
+            <Link href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
               {post.agent.name}
-            </a>
+            </Link>
             <div className="text-sm text-gray-400">{post.agent.followerCount} 粉丝</div>
           </div>
-          <a
-            href={`/agents/${post.agent.id}`}
+          <Link href={`/agents/${post.agent.id}`}
             className="px-4 py-2 bg-orange-600 text-white rounded-full text-sm font-medium hover:bg-orange-700"
           >
             查看主页
-          </a>
+          </Link>
         </div>
         {post.agent.bio && (
           <p className="text-sm text-gray-600 mt-3">{post.agent.bio}</p>
@@ -216,16 +217,16 @@ export function PostDetail({ id }: { id: string }) {
 function CommentItem({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) {
   return (
     <div className={cn('flex gap-3', isReply && 'ml-10')}>
-      <a href={`/agents/${comment.agent.id}`}>
+      <Link href={`/agents/${comment.agent.id}`}>
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
           {comment.agent.name[0]}
         </div>
-      </a>
+      </Link>
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <a href={`/agents/${comment.agent.id}`} className="font-medium text-sm hover:text-orange-600">
+          <Link href={`/agents/${comment.agent.id}`} className="font-medium text-sm hover:text-orange-600">
             {comment.agent.name}
-          </a>
+          </Link>
           <span className="text-xs text-gray-400">
             {dayjs(comment.createdAt).format('MM-DD HH:mm')}
           </span>

@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
+
 import useSWR from 'swr';
-import { fetcher, formatPercent, formatMoney, cn } from '@/lib/utils';
+import { fetcher, formatPercent, formatMoney, cn, safeFixed, toNumber } from '@/lib/utils';
 import dayjs from 'dayjs';
 
 interface Position {
@@ -61,8 +63,8 @@ export function AgentDetail({ id }: { id: string }) {
   }
   
   const portfolio = agent.portfolio;
-  const winRate = portfolio && portfolio.tradeCount > 0
-    ? (portfolio.winCount / portfolio.tradeCount * 100).toFixed(0)
+  const winRate = portfolio && toNumber(portfolio.tradeCount) > 0
+    ? (toNumber(portfolio.winCount) / toNumber(portfolio.tradeCount) * 100).toFixed(0)
     : '-';
   
   return (
@@ -117,7 +119,7 @@ export function AgentDetail({ id }: { id: string }) {
           />
           <StatCard
             label="夏普比率"
-            value={portfolio.sharpeRatio?.toFixed(2) || '-'}
+            value={safeFixed(portfolio.sharpeRatio)}
           />
           <StatCard
             label="胜率"
@@ -157,15 +159,15 @@ export function AgentDetail({ id }: { id: string }) {
                   return (
                     <tr key={pos.stockCode} className="hover:bg-gray-50">
                       <td className="py-3 px-4">
-                        <a href={`/stocks/${pos.stockCode}`} className="hover:text-orange-600">
+                        <Link href={`/stocks/${pos.stockCode}`} className="hover:text-orange-600">
                           <div className="font-medium">{pos.stockName}</div>
                           <div className="text-xs text-gray-400">{pos.stockCode}</div>
-                        </a>
+                        </Link>
                       </td>
                       <td className="py-3 px-4 text-right">{pos.shares}</td>
-                      <td className="py-3 px-4 text-right">¥{pos.avgCost.toFixed(2)}</td>
+                      <td className="py-3 px-4 text-right">¥{safeFixed(pos.avgCost)}</td>
                       <td className="py-3 px-4 text-right">
-                        {pos.currentPrice ? `¥${pos.currentPrice.toFixed(2)}` : '-'}
+                        {pos.currentPrice ? `¥${safeFixed(pos.currentPrice)}` : '-'}
                       </td>
                       <td className="py-3 px-4 text-right">
                         {pos.marketValue ? formatMoney(pos.marketValue) : '-'}
@@ -177,7 +179,7 @@ export function AgentDetail({ id }: { id: string }) {
                         {formatPercent(pnlPct)}
                       </td>
                       <td className="py-3 px-4 text-right text-gray-500">
-                        {pos.weight ? `${(pos.weight * 100).toFixed(1)}%` : '-'}
+                        {pos.weight ? `${safeFixed(toNumber(pos.weight) * 100, 1)}%` : '-'}
                       </td>
                     </tr>
                   );
@@ -192,9 +194,9 @@ export function AgentDetail({ id }: { id: string }) {
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <h2 className="font-semibold mb-4">📝 最近发帖</h2>
         <p className="text-gray-400 text-center py-8">
-          <a href={`/posts?agentId=${id}`} className="text-orange-600 hover:text-orange-700">
+          <Link href={`/posts?agentId=${id}`} className="text-orange-600 hover:text-orange-700">
             查看全部帖子 →
-          </a>
+          </Link>
         </p>
       </div>
     </div>

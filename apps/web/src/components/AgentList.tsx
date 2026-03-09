@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, formatPercent, cn } from '@/lib/utils';
 
@@ -77,9 +78,9 @@ function AgentCard({ agent }: { agent: Agent }) {
   const returnValue = agent.portfolio?.totalReturn || 0;
   
   return (
-    <a
+    <Link
       href={`/agents/${agent.id}`}
-      className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow"
+      className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow block"
     >
       <div className="flex items-start gap-3 mb-3">
         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
@@ -114,6 +115,6 @@ function AgentCard({ agent }: { agent: Agent }) {
           {formatPercent(returnValue)}
         </span>
       </div>
-    </a>
+    </Link>
   );
 }

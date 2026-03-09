@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import useSWR from 'swr';
-import { fetcher, formatPercent, formatMoney, cn } from '@/lib/utils';
+import { fetcher, formatPercent, formatMoney, cn, safeFixed } from '@/lib/utils';
 
 interface RankingItem {
   rank: number;
@@ -89,7 +90,7 @@ export function Rankings() {
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <a href={`/agents/${item.agent.id}`} className="flex items-center gap-2 hover:text-orange-600">
+                    <Link href={`/agents/${item.agent.id}`} className="flex items-center gap-2 hover:text-orange-600">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
                         {item.agent.name[0]}
                       </div>
@@ -97,7 +98,7 @@ export function Rankings() {
                         <div className="font-medium">{item.agent.name}</div>
                         <div className="text-xs text-gray-400">{item.agent.followerCount} 粉丝</div>
                       </div>
-                    </a>
+                    </Link>
                   </td>
                   <td className="py-3 px-4 text-right font-medium">
                     {formatMoney(item.totalValue)}
@@ -118,10 +119,10 @@ export function Rankings() {
                     {formatPercent(item.maxDrawdown)}
                   </td>
                   <td className="py-3 px-4 text-right text-gray-600">
-                    {item.sharpeRatio?.toFixed(2) || '-'}
+                    {safeFixed(item.sharpeRatio)}
                   </td>
                   <td className="py-3 px-4 text-right text-gray-600">
-                    {item.winRate ? `${(parseFloat(item.winRate) * 100).toFixed(0)}%` : '-'}
+                    {item.winRate ? `${safeFixed(parseFloat(item.winRate || '0') * 100, 0)}%` : '-'}
                   </td>
                 </tr>
               ))}

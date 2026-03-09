@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+
 import useSWR from 'swr';
-import { fetcher, formatPercent, formatMoney, formatNumber, cn } from '@/lib/utils';
+import { fetcher, formatPercent, formatMoney, formatNumber, cn, safeFixed, toNumber } from '@/lib/utils';
+import { KlineChart } from './KlineChart';
 import dayjs from 'dayjs';
 
 interface Quote {
@@ -83,13 +86,13 @@ export function StockDetail({ code }: { code: string }) {
                 'text-3xl font-bold',
                 isUp ? 'text-up' : 'text-down'
               )}>
-                ¥{quote.price.toFixed(2)}
+                ¥{safeFixed(quote.price)}
               </div>
               <div className={cn(
                 'text-lg',
                 isUp ? 'text-up' : 'text-down'
               )}>
-                {isUp ? '+' : ''}{quote.change.toFixed(2)} ({formatPercent(quote.changePct)})
+                {isUp ? '+' : ''}{safeFixed(quote.change)} ({formatPercent(quote.changePct)})
               </div>
             </div>
           </div>
@@ -97,19 +100,19 @@ export function StockDetail({ code }: { code: string }) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-500">今开</span>
-              <span className="float-right font-medium">¥{quote.open.toFixed(2)}</span>
+              <span className="float-right font-medium">¥{safeFixed(quote.open)}</span>
             </div>
             <div>
               <span className="text-gray-500">昨收</span>
-              <span className="float-right font-medium">¥{quote.preClose.toFixed(2)}</span>
+              <span className="float-right font-medium">¥{safeFixed(quote.preClose)}</span>
             </div>
             <div>
               <span className="text-gray-500">最高</span>
-              <span className="float-right font-medium text-up">¥{quote.high.toFixed(2)}</span>
+              <span className="float-right font-medium text-up">¥{safeFixed(quote.high)}</span>
             </div>
             <div>
               <span className="text-gray-500">最低</span>
-              <span className="float-right font-medium text-down">¥{quote.low.toFixed(2)}</span>
+              <span className="float-right font-medium text-down">¥{safeFixed(quote.low)}</span>
             </div>
             <div>
               <span className="text-gray-500">成交量</span>
@@ -122,7 +125,7 @@ export function StockDetail({ code }: { code: string }) {
             {quote.pe && (
               <div>
                 <span className="text-gray-500">市盈率</span>
-                <span className="float-right font-medium">{quote.pe.toFixed(2)}</span>
+                <span className="float-right font-medium">{safeFixed(quote.pe)}</span>
               </div>
             )}
             {quote.marketCap && (
@@ -134,6 +137,9 @@ export function StockDetail({ code }: { code: string }) {
           </div>
         </div>
       )}
+      
+      {/* K 线图 */}
+      <KlineChart code={code} />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* AI Holders */}
@@ -150,13 +156,13 @@ export function StockDetail({ code }: { code: string }) {
                     {holder.agent.name[0]}
                   </div>
                   <div className="flex-1">
-                    <a href={`/agents/${holder.agent.id}`} className="font-medium hover:text-orange-600">
+                    <Link href={`/agents/${holder.agent.id}`} className="font-medium hover:text-orange-600">
                       {holder.agent.name}
-                    </a>
+                    </Link>
                   </div>
                   <div className="text-right">
                     <div className="font-medium">{holder.shares} 股</div>
-                    <div className="text-xs text-gray-400">成本 ¥{holder.avgCost.toFixed(2)}</div>
+                    <div className="text-xs text-gray-400">成本 ¥{safeFixed(holder.avgCost)}</div>
                   </div>
                 </div>
               ))}
@@ -180,9 +186,9 @@ export function StockDetail({ code }: { code: string }) {
                     {trade.side === 'buy' ? '买' : '卖'}
                   </span>
                   <div className="flex-1">
-                    <a href={`/agents/${trade.agent.id}`} className="font-medium hover:text-orange-600">
+                    <Link href={`/agents/${trade.agent.id}`} className="font-medium hover:text-orange-600">
                       {trade.agent.name}
-                    </a>
+                    </Link>
                     <div className="text-xs text-gray-400">
                       {dayjs(trade.createdAt).format('MM-DD HH:mm')}
                     </div>
@@ -206,10 +212,10 @@ export function StockDetail({ code }: { code: string }) {
         ) : (
           <div className="divide-y">
             {stockData.posts.map((post) => (
-              <a
+              <Link
                 key={post.id}
                 href={`/posts/${post.id}`}
-                className="p-4 flex items-center gap-3 hover:bg-gray-50"
+                className="p-4 flex items-center gap-3 hover:bg-gray-50 block"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
                   {post.agent.name[0]}
@@ -220,7 +226,7 @@ export function StockDetail({ code }: { code: string }) {
                     {post.agent.name} · {dayjs(post.createdAt).format('MM-DD HH:mm')}
                   </div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         )}

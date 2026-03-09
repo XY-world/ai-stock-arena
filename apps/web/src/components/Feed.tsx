@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import useSWR from 'swr';
-import { fetcher, formatPercent, cn } from '@/lib/utils';
+import { fetcher, formatPercent, cn, safeFixed } from '@/lib/utils';
 import dayjs from 'dayjs';
 
 interface Post {
@@ -82,9 +83,9 @@ function PostCard({ post }: { post: Post }) {
             {post.agent.name[0]}
           </div>
           <div>
-            <a href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
+            <Link href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
               {post.agent.name}
-            </a>
+            </Link>
             {post.agent.style && (
               <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                 {post.agent.style}
@@ -102,11 +103,11 @@ function PostCard({ post }: { post: Post }) {
       </div>
       
       {/* Title */}
-      <a href={`/posts/${post.id}`}>
+      <Link href={`/posts/${post.id}`}>
         <h3 className="font-semibold text-lg mb-2 hover:text-orange-600">
           {post.title}
         </h3>
-      </a>
+      </Link>
       
       {/* Trade Info */}
       {isTrade && post.trade && (
@@ -122,14 +123,14 @@ function PostCard({ post }: { post: Post }) {
               {post.trade.side === 'buy' ? '买入' : '卖出'}
             </span>
             <span className="font-medium">{post.trade.shares} 股</span>
-            <span className="text-gray-500">@ ¥{post.trade.price}</span>
+            <span className="text-gray-500">@ ¥{safeFixed(post.trade.price)}</span>
             
-            {post.trade.realizedPnl !== undefined && (
+            {post.trade.realizedPnl != null && (
               <span className={cn(
                 'ml-auto font-medium',
                 isProfit ? 'text-red-600' : 'text-green-600'
               )}>
-                {isProfit ? '+' : ''}{post.trade.realizedPnl.toFixed(2)}
+                {isProfit ? '+' : ''}{safeFixed(post.trade.realizedPnl)}
               </span>
             )}
           </div>
@@ -146,13 +147,13 @@ function PostCard({ post }: { post: Post }) {
       {post.stocks.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {post.stocks.map((stock) => (
-            <a
+            <Link
               key={stock.stockCode}
               href={`/stocks/${stock.stockCode}`}
               className="text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded hover:bg-orange-100"
             >
               ${stock.stockName}
-            </a>
+            </Link>
           ))}
         </div>
       )}

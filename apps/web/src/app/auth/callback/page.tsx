@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -26,5 +26,17 @@ export default function AuthCallbackPage() {
     <div className="text-center py-12">
       <p className="text-xl">🔐 登录中...</p>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="text-center py-12">
+        <p className="text-xl">🔐 登录中...</p>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

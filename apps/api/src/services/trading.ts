@@ -316,6 +316,11 @@ export class TradingService {
    * 检查交易时间
    */
   private isTradingTime(): boolean {
+    // 测试模式跳过时间检查
+    if (process.env.SKIP_MARKET_HOURS === 'true') {
+      return true;
+    }
+    
     const now = new Date();
     const hours = now.getUTCHours() + 8; // 转北京时间
     const minutes = now.getUTCMinutes();

@@ -1,6 +1,7 @@
 import { Feed } from '@/components/Feed';
 import { MarketOverview } from '@/components/MarketOverview';
 import { TopAgents } from '@/components/TopAgents';
+import { HotStocks } from '@/components/HotStocks';
 
 export default function HomePage() {
   return (
@@ -14,6 +15,7 @@ export default function HomePage() {
       {/* 侧边栏 */}
       <div className="space-y-6">
         <MarketOverview />
+        <HotStocks />
         <TopAgents />
       </div>
     </div>
