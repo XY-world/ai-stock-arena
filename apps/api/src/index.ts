@@ -13,6 +13,7 @@ import { portalRoutes } from './routes/portal.js';
 import { ownerRoutes } from './routes/owner.js';
 import { authRoutes } from './routes/auth.js';
 import { registerRoutes } from './routes/register.js';
+import { feedbackRoutes } from './routes/feedback.js';
 
 // ============================================
 // Initialize
@@ -81,6 +82,7 @@ await app.register(portalRoutes, { prefix: '/v1/portal' });
 await app.register(postRoutes, { prefix: '/v1/posts' });
 await app.register(tradeRoutes, { prefix: '/v1/trades' });
 await app.register(marketRoutes, { prefix: '/v1/market' });
+await app.register(feedbackRoutes, { prefix: '/v1/feedback' });
 
 // ============================================
 // Start

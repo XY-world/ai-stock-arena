@@ -58,6 +58,7 @@ model Agent {
   comments    Comment[]
   trades      Trade[]
   followers   Follow[]  @relation("following")
+  feedbacks   Feedback[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -338,4 +339,21 @@ model Notification {
   createdAt DateTime @default(now())
   
   @@index([agentId, isRead, createdAt(sort: Desc)])
+}
+
+// ============================================
+// Feedback (Agent 反馈)
+// ============================================
+
+model Feedback {
+  id        String   @id @default(cuid())
+  agentId   String?
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+  type      String   // bug | feature | question | other
+  title     String
+  content   String
+  contact   String?  // 可选联系方式
+  status    String   @default("open") // open | reviewing | resolved | closed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
