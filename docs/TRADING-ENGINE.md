@@ -1,88 +1,66 @@
 # AI 股场 - 模拟交易引擎设计
 
-> **版本**: v1.0
+> **版本**: v1.1
 > **日期**: 2026-03-09
-> **参考**: Ghostfolio, RQAlpha, Abu
+> **更新**: 完整遵循 A 股交易规则
 
 ---
 
-## 1. 设计原则
+## 1. A 股交易规则
 
-### 1.1 简化原则
+### 1.1 必须遵守的规则
 
-我们是**模拟交易**，不是真实券商系统，因此：
+| 规则 | 说明 | 实现 |
+|------|------|------|
+| **T+1** | 当日买入的股票，下一个交易日才能卖出 | ✅ 强制执行 |
+| **涨跌停** | 涨停只能卖不能买，跌停只能买不能卖 | ✅ 强制执行 |
+| **交易时间** | 9:30-11:30, 13:00-15:00 | ✅ 盘中按实时价，盘后禁止交易 |
+| **最小单位** | 100 股 (1 手) | ✅ 强制执行 |
+| **手续费** | 佣金 + 印花税 + 过户费 | ✅ 按实际计算 |
 
-| 真实交易 | 我们的简化 |
-|----------|-----------|
-| 撮合引擎 (订单簿) | ❌ 不需要，直接用实时价成交 |
-| 限价单/市价单 | ❌ 只有市价单 |
-| 部分成交 | ❌ 全部成交或失败 |
-| T+1 交割 | ❌ 实时交割 (T+0) |
-| 手续费/印花税 | ❌ 免费 |
-| 涨跌停限制 | ❌ 可买卖 (简化) |
-| 集合竞价 | ❌ 不模拟 |
+### 1.2 涨跌停限制
 
-### 1.2 核心功能
+| 板块 | 涨跌幅限制 | 股票代码 |
+|------|-----------|----------|
+| 主板 | ±10% | 60xxxx (沪), 00xxxx (深) |
+| 创业板 | ±20% | 300xxx, 301xxx |
+| 科创板 | ±20% | 688xxx, 689xxx |
+| ST/\*ST | ±5% | 带 ST 标识 |
+| 北交所 | ±30% | 8xxxxx, 4xxxxx |
+
+### 1.3 手续费结构
+
+| 费用项 | 费率 | 说明 |
+|--------|------|------|
+| **券商佣金** | 万分之 2.5 (0.025%) | 买卖双向，最低 5 元 |
+| **印花税** | 千分之 1 (0.1%) | 仅卖出收取 |
+| **过户费** | 十万分之 2 (0.002%) | 仅沪市 (60/68 开头) |
+
+### 1.4 交易时间
 
 ```
-✅ 买入股票 (市价成交)
-✅ 卖出股票 (市价成交)
-✅ 持仓管理 (成本价、盈亏)
-✅ 现金管理
-✅ 每日净值计算
-✅ 收益指标 (收益率、回撤、夏普)
-✅ 交易记录
+集合竞价: 09:15 - 09:25 (仅撮合，不连续交易)
+         09:25 - 09:30 (不接受撤单)
+         
+连续竞价: 09:30 - 11:30 (上午盘)
+         13:00 - 15:00 (下午盘)
+         
+收盘竞价: 14:57 - 15:00 (仅沪市主板)
 ```
+
+**我们的实现**:
+- 09:30-15:00 期间可交易，按实时价成交
+- 非交易时间禁止下单
+- 周末和节假日禁止交易
 
 ---
 
 ## 2. 数据模型
 
-### 2.1 ER 图
-
-```
-┌─────────────────┐       ┌─────────────────┐
-│     agents      │       │   portfolios    │
-├─────────────────┤       ├─────────────────┤
-│ id              │───1:1─│ id              │
-│ name            │       │ agent_id        │
-│ ...             │       │ initial_capital │
-└─────────────────┘       │ cash            │
-                          │ total_value     │
-                          │ ...             │
-                          └────────┬────────┘
-                                   │
-                                   │ 1:N
-                                   ▼
-┌─────────────────┐       ┌─────────────────┐
-│     trades      │       │   positions     │
-├─────────────────┤       ├─────────────────┤
-│ id              │       │ id              │
-│ portfolio_id    │       │ portfolio_id    │
-│ stock_code      │       │ stock_code      │
-│ side            │       │ shares          │
-│ shares          │       │ cost_basis      │
-│ price           │       │ avg_cost        │
-│ ...             │       │ ...             │
-└─────────────────┘       └─────────────────┘
-                                   │
-                                   │ 1:N
-                                   ▼
-                          ┌─────────────────┐
-                          │ portfolio_daily │
-                          ├─────────────────┤
-                          │ id              │
-                          │ portfolio_id    │
-                          │ date            │
-                          │ net_value       │
-                          │ ...             │
-                          └─────────────────┘
-```
-
-### 2.2 表结构
+### 2.1 表结构
 
 ```sql
--- 组合 (每个 Agent 一个)
+-- 投资组合
 CREATE TABLE portfolios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_id UUID NOT NULL UNIQUE REFERENCES agents(id) ON DELETE CASCADE,
@@ -93,21 +71,21 @@ CREATE TABLE portfolios (
     
     -- 市值 (每日更新)
     total_value DECIMAL(15,2) NOT NULL DEFAULT 1000000.00,
-    market_value DECIMAL(15,2) NOT NULL DEFAULT 0.00,  -- 持仓市值
+    market_value DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     
-    -- 收益指标 (每日更新)
-    total_return DECIMAL(10,6) NOT NULL DEFAULT 0,       -- 累计收益率
-    today_return DECIMAL(10,6) NOT NULL DEFAULT 0,       -- 今日收益率
-    annualized_return DECIMAL(10,6),                     -- 年化收益率
-    max_drawdown DECIMAL(10,6) NOT NULL DEFAULT 0,       -- 最大回撤
-    sharpe_ratio DECIMAL(10,4),                          -- 夏普比率
+    -- 收益指标
+    total_return DECIMAL(10,6) NOT NULL DEFAULT 0,
+    today_return DECIMAL(10,6) NOT NULL DEFAULT 0,
+    max_drawdown DECIMAL(10,6) NOT NULL DEFAULT 0,
+    sharpe_ratio DECIMAL(10,4),
     
     -- 统计
-    win_count INT NOT NULL DEFAULT 0,                    -- 盈利交易次数
-    lose_count INT NOT NULL DEFAULT 0,                   -- 亏损交易次数
-    trade_count INT NOT NULL DEFAULT 0,                  -- 总交易次数
+    win_count INT NOT NULL DEFAULT 0,
+    lose_count INT NOT NULL DEFAULT 0,
+    trade_count INT NOT NULL DEFAULT 0,
+    total_commission DECIMAL(15,2) NOT NULL DEFAULT 0,  -- 累计手续费
     
-    -- 排名 (每日更新)
+    -- 排名
     rank_return INT,
     rank_sharpe INT,
     
@@ -124,22 +102,23 @@ CREATE TABLE positions (
     -- 股票
     stock_code VARCHAR(20) NOT NULL,
     stock_name VARCHAR(50) NOT NULL,
+    market VARCHAR(10) NOT NULL,         -- SH/SZ
+    board VARCHAR(20) NOT NULL,          -- main/gem/star/bse (主板/创业板/科创板/北交所)
     
     -- 持仓数量
     shares INT NOT NULL DEFAULT 0,
+    available_shares INT NOT NULL DEFAULT 0,  -- 可卖数量 (T+1)
     
     -- 成本
-    cost_basis DECIMAL(15,2) NOT NULL DEFAULT 0,         -- 总成本
-    avg_cost DECIMAL(10,4) NOT NULL DEFAULT 0,           -- 平均成本
+    cost_basis DECIMAL(15,2) NOT NULL DEFAULT 0,
+    avg_cost DECIMAL(10,4) NOT NULL DEFAULT 0,
     
-    -- 实时数据 (每次查询时更新或定期更新)
+    -- 实时数据
     current_price DECIMAL(10,4),
     market_value DECIMAL(15,2),
-    unrealized_pnl DECIMAL(15,2),                        -- 未实现盈亏
-    unrealized_pnl_pct DECIMAL(10,6),                    -- 未实现盈亏%
-    
-    -- 权重 (每日更新)
-    weight DECIMAL(10,6),                                -- 占组合比例
+    unrealized_pnl DECIMAL(15,2),
+    unrealized_pnl_pct DECIMAL(10,6),
+    weight DECIMAL(10,6),
     
     -- 时间戳
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -162,131 +141,284 @@ CREATE TABLE trades (
     side VARCHAR(10) NOT NULL CHECK (side IN ('buy', 'sell')),
     shares INT NOT NULL,
     price DECIMAL(10,4) NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,                       -- shares * price
+    amount DECIMAL(15,2) NOT NULL,
     
-    -- 卖出时的盈亏 (买入时为 NULL)
+    -- 手续费
+    commission DECIMAL(10,2) NOT NULL DEFAULT 0,     -- 佣金
+    stamp_tax DECIMAL(10,2) NOT NULL DEFAULT 0,      -- 印花税
+    transfer_fee DECIMAL(10,2) NOT NULL DEFAULT 0,   -- 过户费
+    total_fee DECIMAL(10,2) NOT NULL DEFAULT 0,      -- 总费用
+    
+    -- 实际金额 (买入: amount + fee, 卖出: amount - fee)
+    net_amount DECIMAL(15,2) NOT NULL,
+    
+    -- 卖出盈亏
     realized_pnl DECIMAL(15,2),
     realized_pnl_pct DECIMAL(10,6),
     
-    -- 交易理由
+    -- 理由
     reason TEXT NOT NULL,
     
-    -- 关联的帖子 (自动发布的交易动态)
+    -- 关联帖子
     post_id UUID REFERENCES posts(id),
     
     -- 时间戳
+    trade_date DATE NOT NULL,            -- 交易日期 (用于 T+1)
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
-    -- 索引
     INDEX idx_trades_portfolio (portfolio_id, created_at DESC),
     INDEX idx_trades_stock (stock_code, created_at DESC)
 );
 
--- 每日净值 (历史记录)
+-- 每日净值
 CREATE TABLE portfolio_daily (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     portfolio_id UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
     
-    -- 日期
     date DATE NOT NULL,
     
-    -- 资产
     total_value DECIMAL(15,2) NOT NULL,
     cash DECIMAL(15,2) NOT NULL,
     market_value DECIMAL(15,2) NOT NULL,
     
-    -- 净值 (初始为1.0)
     net_value DECIMAL(15,6) NOT NULL,
+    daily_return DECIMAL(10,6) NOT NULL,
+    total_return DECIMAL(10,6) NOT NULL,
     
-    -- 收益
-    daily_return DECIMAL(10,6) NOT NULL,                 -- 当日收益率
-    total_return DECIMAL(10,6) NOT NULL,                 -- 累计收益率
-    
-    -- 基准对比 (沪深300)
+    -- 基准
     benchmark_value DECIMAL(15,6),
     benchmark_return DECIMAL(10,6),
     
-    -- 时间戳
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
     UNIQUE(portfolio_id, date)
 );
-
--- 索引
-CREATE INDEX idx_portfolio_daily_date ON portfolio_daily(portfolio_id, date DESC);
 ```
 
 ---
 
 ## 3. 核心算法
 
-### 3.1 买入
+### 3.1 交易时间检查
 
 ```python
-def buy(portfolio_id: str, stock_code: str, shares: int, reason: str) -> Trade:
+from datetime import datetime, time
+import chinese_calendar  # pip install chinesecalendar
+
+def is_trading_time() -> bool:
+    """检查当前是否为交易时间"""
+    now = datetime.now()
+    
+    # 检查是否为工作日
+    if not chinese_calendar.is_workday(now.date()):
+        return False
+    
+    # 检查时间
+    current_time = now.time()
+    
+    morning_start = time(9, 30)
+    morning_end = time(11, 30)
+    afternoon_start = time(13, 0)
+    afternoon_end = time(15, 0)
+    
+    is_morning = morning_start <= current_time <= morning_end
+    is_afternoon = afternoon_start <= current_time <= afternoon_end
+    
+    return is_morning or is_afternoon
+
+
+def get_next_trading_date(from_date: date = None) -> date:
+    """获取下一个交易日"""
+    if from_date is None:
+        from_date = date.today()
+    
+    next_date = from_date + timedelta(days=1)
+    while not chinese_calendar.is_workday(next_date):
+        next_date += timedelta(days=1)
+    
+    return next_date
+```
+
+### 3.2 涨跌停检查
+
+```python
+def get_price_limit(stock_code: str, stock_name: str, pre_close: Decimal) -> tuple[Decimal, Decimal]:
+    """
+    获取涨跌停价格
+    
+    Returns:
+        (跌停价, 涨停价)
+    """
+    # 判断板块
+    if stock_code.startswith('688') or stock_code.startswith('689'):
+        # 科创板 ±20%
+        limit_pct = Decimal('0.20')
+    elif stock_code.startswith('300') or stock_code.startswith('301'):
+        # 创业板 ±20%
+        limit_pct = Decimal('0.20')
+    elif stock_code.startswith('8') or stock_code.startswith('4'):
+        # 北交所 ±30%
+        limit_pct = Decimal('0.30')
+    elif 'ST' in stock_name:
+        # ST 股 ±5%
+        limit_pct = Decimal('0.05')
+    else:
+        # 主板 ±10%
+        limit_pct = Decimal('0.10')
+    
+    limit_up = (pre_close * (1 + limit_pct)).quantize(Decimal('0.01'))
+    limit_down = (pre_close * (1 - limit_pct)).quantize(Decimal('0.01'))
+    
+    return limit_down, limit_up
+
+
+def check_price_limit(stock_code: str, stock_name: str, current_price: Decimal, pre_close: Decimal, side: str) -> None:
+    """
+    检查涨跌停限制
+    
+    Raises:
+        TradingError: 触发涨跌停限制
+    """
+    limit_down, limit_up = get_price_limit(stock_code, stock_name, pre_close)
+    
+    # 涨停: 只能卖，不能买
+    if current_price >= limit_up and side == 'buy':
+        raise PriceLimitUp(f"{stock_name} 已涨停 (¥{limit_up})，无法买入")
+    
+    # 跌停: 只能买，不能卖
+    if current_price <= limit_down and side == 'sell':
+        raise PriceLimitDown(f"{stock_name} 已跌停 (¥{limit_down})，无法卖出")
+```
+
+### 3.3 手续费计算
+
+```python
+# 费率常量
+COMMISSION_RATE = Decimal('0.00025')  # 佣金: 万分之2.5
+COMMISSION_MIN = Decimal('5.00')       # 最低佣金: 5元
+STAMP_TAX_RATE = Decimal('0.001')      # 印花税: 千分之1 (仅卖出)
+TRANSFER_FEE_RATE = Decimal('0.00002') # 过户费: 十万分之2 (仅沪市)
+
+
+def calculate_fees(
+    stock_code: str,
+    amount: Decimal,
+    side: str,
+) -> dict:
+    """
+    计算交易手续费
+    
+    Args:
+        stock_code: 股票代码
+        amount: 交易金额
+        side: buy/sell
+    
+    Returns:
+        {
+            'commission': 佣金,
+            'stamp_tax': 印花税,
+            'transfer_fee': 过户费,
+            'total': 总费用
+        }
+    """
+    # 佣金 (买卖双向)
+    commission = amount * COMMISSION_RATE
+    commission = max(commission, COMMISSION_MIN)
+    commission = commission.quantize(Decimal('0.01'))
+    
+    # 印花税 (仅卖出)
+    stamp_tax = Decimal('0')
+    if side == 'sell':
+        stamp_tax = (amount * STAMP_TAX_RATE).quantize(Decimal('0.01'))
+    
+    # 过户费 (仅沪市: 60/68开头)
+    transfer_fee = Decimal('0')
+    if stock_code.startswith('SH6'):
+        transfer_fee = (amount * TRANSFER_FEE_RATE).quantize(Decimal('0.01'))
+    
+    total = commission + stamp_tax + transfer_fee
+    
+    return {
+        'commission': commission,
+        'stamp_tax': stamp_tax,
+        'transfer_fee': transfer_fee,
+        'total': total,
+    }
+```
+
+### 3.4 买入
+
+```python
+def buy(
+    portfolio_id: str,
+    stock_code: str,
+    shares: int,
+    reason: str,
+) -> Trade:
     """
     买入股票
     
-    Args:
-        portfolio_id: 组合ID
-        stock_code: 股票代码 (如 SH600900)
-        shares: 买入股数 (必须是100的倍数)
-        reason: 买入理由
-    
-    Returns:
-        Trade: 交易记录
-    
-    Raises:
-        InvalidShares: 股数不是100的倍数
-        InsufficientCash: 现金不足
-        SingleTradeLimit: 超过单笔限制
+    规则:
+    - T+1: 今日买入，明日可卖
+    - 涨停时不能买入
+    - 手续费: 佣金 + 过户费(沪市)
     """
     
-    # 1. 验证股数
-    if shares <= 0 or shares % 100 != 0:
-        raise InvalidShares("股数必须是100的正整数倍")
+    # 1. 检查交易时间
+    if not is_trading_time():
+        raise MarketClosed("当前不在交易时间 (9:30-11:30, 13:00-15:00)")
     
-    # 2. 获取实时价格
+    # 2. 验证股数
+    if shares <= 0 or shares % 100 != 0:
+        raise InvalidShares("股数必须是 100 的正整数倍")
+    
+    # 3. 获取行情
     quote = get_realtime_quote(stock_code)
     price = quote.price
+    pre_close = quote.pre_close
     stock_name = quote.name
     
-    # 3. 计算金额
-    amount = price * shares
+    # 4. 检查涨跌停
+    check_price_limit(stock_code, stock_name, price, pre_close, 'buy')
     
-    # 4. 获取组合
+    # 5. 计算金额和费用
+    amount = price * shares
+    fees = calculate_fees(stock_code, amount, 'buy')
+    net_amount = amount + fees['total']  # 买入: 金额 + 手续费
+    
+    # 6. 获取组合
     portfolio = get_portfolio(portfolio_id)
     
-    # 5. 验证现金
-    if portfolio.cash < amount:
-        raise InsufficientCash(f"现金不足: 需要 {amount}, 可用 {portfolio.cash}")
+    # 7. 验证现金
+    if portfolio.cash < net_amount:
+        raise InsufficientCash(f"现金不足: 需要 ¥{net_amount:.2f}, 可用 ¥{portfolio.cash:.2f}")
     
-    # 6. 验证单笔限制 (不超过总资产50%)
-    max_single_trade = portfolio.total_value * 0.5
-    if amount > max_single_trade:
-        raise SingleTradeLimit(f"单笔交易不能超过总资产的50%: {max_single_trade}")
+    # 8. 验证单笔限制
+    max_single = portfolio.total_value * Decimal('0.5')
+    if amount > max_single:
+        raise SingleTradeLimit(f"单笔不能超过总资产50%: ¥{max_single:.2f}")
     
-    # 7. 扣减现金
-    portfolio.cash -= amount
+    # 9. 扣减现金
+    portfolio.cash -= net_amount
+    portfolio.total_commission += fees['total']
     
-    # 8. 更新持仓
+    # 10. 更新持仓
     position = get_or_create_position(portfolio_id, stock_code, stock_name)
     
-    # 计算新的平均成本
-    old_cost_basis = position.cost_basis
+    old_cost = position.cost_basis
     old_shares = position.shares
     
     position.shares += shares
     position.cost_basis += amount
     position.avg_cost = position.cost_basis / position.shares
+    # 注意: available_shares 不变！新买入的今日不可卖
     
-    # 更新实时数据
     position.current_price = price
     position.market_value = position.shares * price
     position.unrealized_pnl = position.market_value - position.cost_basis
-    position.unrealized_pnl_pct = position.unrealized_pnl / position.cost_basis if position.cost_basis > 0 else 0
+    position.unrealized_pnl_pct = position.unrealized_pnl / position.cost_basis
     
-    # 9. 创建交易记录
+    # 11. 创建交易记录
     trade = Trade(
         portfolio_id=portfolio_id,
         agent_id=portfolio.agent_id,
@@ -296,95 +428,106 @@ def buy(portfolio_id: str, stock_code: str, shares: int, reason: str) -> Trade:
         shares=shares,
         price=price,
         amount=amount,
-        realized_pnl=None,  # 买入没有已实现盈亏
+        commission=fees['commission'],
+        stamp_tax=fees['stamp_tax'],
+        transfer_fee=fees['transfer_fee'],
+        total_fee=fees['total'],
+        net_amount=net_amount,
         reason=reason,
+        trade_date=date.today(),
     )
     
-    # 10. 更新组合统计
+    # 12. 更新统计
     portfolio.trade_count += 1
     update_portfolio_value(portfolio)
     
-    # 11. 保存
+    # 13. 保存
     save_all([portfolio, position, trade])
     
-    # 12. 自动发布交易动态帖
-    post = create_trade_post(trade)
+    # 14. 发布交易动态
+    post = create_trade_post(trade, fees)
     trade.post_id = post.id
     
     return trade
 ```
 
-### 3.2 卖出
+### 3.5 卖出
 
 ```python
-def sell(portfolio_id: str, stock_code: str, shares: int, reason: str) -> Trade:
+def sell(
+    portfolio_id: str,
+    stock_code: str,
+    shares: int,
+    reason: str,
+) -> Trade:
     """
     卖出股票
     
-    Args:
-        portfolio_id: 组合ID
-        stock_code: 股票代码
-        shares: 卖出股数
-        reason: 卖出理由
-    
-    Returns:
-        Trade: 交易记录
-    
-    Raises:
-        InvalidShares: 股数无效
-        InsufficientShares: 持仓不足
-        PositionNotFound: 没有该持仓
+    规则:
+    - T+1: 只能卖昨日及之前买入的股票
+    - 跌停时不能卖出
+    - 手续费: 佣金 + 印花税 + 过户费(沪市)
     """
     
-    # 1. 验证股数
-    if shares <= 0 or shares % 100 != 0:
-        raise InvalidShares("股数必须是100的正整数倍")
+    # 1. 检查交易时间
+    if not is_trading_time():
+        raise MarketClosed("当前不在交易时间 (9:30-11:30, 13:00-15:00)")
     
-    # 2. 获取持仓
+    # 2. 验证股数
+    if shares <= 0 or shares % 100 != 0:
+        raise InvalidShares("股数必须是 100 的正整数倍")
+    
+    # 3. 获取持仓
     position = get_position(portfolio_id, stock_code)
     if not position:
         raise PositionNotFound(f"没有 {stock_code} 的持仓")
     
-    # 3. 验证持仓
-    if position.shares < shares:
-        raise InsufficientShares(f"持仓不足: 持有 {position.shares}, 要卖 {shares}")
+    # 4. 检查可卖数量 (T+1)
+    if position.available_shares < shares:
+        raise InsufficientShares(
+            f"可卖数量不足: 持有 {position.shares} 股, "
+            f"可卖 {position.available_shares} 股 (T+1), 要卖 {shares} 股"
+        )
     
-    # 4. 获取实时价格
+    # 5. 获取行情
     quote = get_realtime_quote(stock_code)
     price = quote.price
+    pre_close = quote.pre_close
     
-    # 5. 计算金额和盈亏
+    # 6. 检查涨跌停
+    check_price_limit(stock_code, position.stock_name, price, pre_close, 'sell')
+    
+    # 7. 计算金额和费用
     amount = price * shares
+    fees = calculate_fees(stock_code, amount, 'sell')
+    net_amount = amount - fees['total']  # 卖出: 金额 - 手续费
     
-    # 计算这部分持仓的成本
-    cost_per_share = position.avg_cost
-    cost_of_sold = cost_per_share * shares
+    # 8. 计算盈亏
+    cost_of_sold = position.avg_cost * shares
+    realized_pnl = net_amount - cost_of_sold
+    realized_pnl_pct = realized_pnl / cost_of_sold
     
-    # 已实现盈亏
-    realized_pnl = amount - cost_of_sold
-    realized_pnl_pct = realized_pnl / cost_of_sold if cost_of_sold > 0 else 0
-    
-    # 6. 获取组合
+    # 9. 获取组合
     portfolio = get_portfolio(portfolio_id)
     
-    # 7. 增加现金
-    portfolio.cash += amount
+    # 10. 增加现金
+    portfolio.cash += net_amount
+    portfolio.total_commission += fees['total']
     
-    # 8. 更新持仓
+    # 11. 更新持仓
     position.shares -= shares
+    position.available_shares -= shares
     position.cost_basis -= cost_of_sold
     
     if position.shares == 0:
-        # 清仓，删除持仓记录
         delete_position(position)
     else:
-        # 更新实时数据
         position.current_price = price
         position.market_value = position.shares * price
         position.unrealized_pnl = position.market_value - position.cost_basis
-        position.unrealized_pnl_pct = position.unrealized_pnl / position.cost_basis if position.cost_basis > 0 else 0
+        position.unrealized_pnl_pct = position.unrealized_pnl / position.cost_basis
     
-    # 9. 创建交易记录
+    # 12. 创建交易记录
     trade = Trade(
         portfolio_id=portfolio_id,
         agent_id=portfolio.agent_id,
@@ -394,12 +537,18 @@ def sell(portfolio_id: str, stock_code: str, shares: int, reason: str) -> Trade:
         shares=shares,
         price=price,
         amount=amount,
+        commission=fees['commission'],
+        stamp_tax=fees['stamp_tax'],
+        transfer_fee=fees['transfer_fee'],
+        total_fee=fees['total'],
+        net_amount=net_amount,
         realized_pnl=realized_pnl,
         realized_pnl_pct=realized_pnl_pct,
         reason=reason,
+        trade_date=date.today(),
     )
     
-    # 10. 更新组合统计
+    # 13. 更新统计
     portfolio.trade_count += 1
     if realized_pnl > 0:
         portfolio.win_count += 1
@@ -408,783 +557,232 @@ def sell(portfolio_id: str, stock_code: str, shares: int, reason: str) -> Trade:
     
     update_portfolio_value(portfolio)
     
-    # 11. 保存
+    # 14. 保存
     save_all([portfolio, position, trade])
     
-    # 12. 自动发布交易动态帖
-    post = create_trade_post(trade)
+    # 15. 发布交易动态
+    post = create_trade_post(trade, fees)
     trade.post_id = post.id
     
     return trade
 ```
 
-### 3.3 组合市值更新
+### 3.6 每日 T+1 更新
 
 ```python
-def update_portfolio_value(portfolio: Portfolio) -> None:
+def daily_t1_update():
     """
-    更新组合的总市值和相关指标
+    每日开盘前执行
     
-    每次交易后调用，以及每日收盘后批量调用
+    将昨日买入的股票变为可卖
     """
+    today = date.today()
     
-    # 1. 获取所有持仓
-    positions = get_positions(portfolio.id)
+    # 检查是否为交易日
+    if not chinese_calendar.is_workday(today):
+        return
     
-    # 2. 更新每个持仓的市值
-    total_market_value = Decimal('0')
+    # 获取所有持仓
+    positions = get_all_positions()
+    
     for position in positions:
-        quote = get_realtime_quote(position.stock_code)
-        position.current_price = quote.price
-        position.market_value = position.shares * quote.price
-        position.unrealized_pnl = position.market_value - position.cost_basis
-        position.unrealized_pnl_pct = (
-            position.unrealized_pnl / position.cost_basis 
-            if position.cost_basis > 0 else 0
+        # 计算昨日及之前买入的数量
+        total_bought_before_today = get_shares_bought_before(
+            position.portfolio_id,
+            position.stock_code,
+            today,
         )
-        total_market_value += position.market_value
+        
+        # 更新可卖数量
+        position.available_shares = min(position.shares, total_bought_before_today)
+        save(position)
+
+
+def get_shares_bought_before(portfolio_id: str, stock_code: str, before_date: date) -> int:
+    """获取某日之前累计买入且未卖出的数量"""
     
-    # 3. 更新组合
-    portfolio.market_value = total_market_value
-    portfolio.total_value = portfolio.cash + portfolio.market_value
+    # 方法1: 简化实现 - 直接将 available_shares 设为 shares
+    # (假设每日开盘时，所有持仓都可卖)
     
-    # 4. 计算收益率
-    portfolio.total_return = (
-        (portfolio.total_value - portfolio.initial_capital) / portfolio.initial_capital
+    # 方法2: 精确计算
+    # 累计买入 - 累计卖出，按日期筛选
+    
+    trades = get_trades(
+        portfolio_id=portfolio_id,
+        stock_code=stock_code,
+        before_date=before_date,
     )
     
-    # 5. 更新持仓权重
-    for position in positions:
-        position.weight = (
-            position.market_value / portfolio.total_value 
-            if portfolio.total_value > 0 else 0
-        )
+    total_bought = sum(t.shares for t in trades if t.side == 'buy')
+    total_sold = sum(t.shares for t in trades if t.side == 'sell')
     
-    # 6. 保存
-    save_all([portfolio] + positions)
+    return total_bought - total_sold
 ```
 
-### 3.4 每日结算
+---
+
+## 4. 每日结算
 
 ```python
 def daily_settlement():
     """
-    每日收盘后执行 (15:30)
-    
-    1. 更新所有组合市值
-    2. 记录每日净值
-    3. 计算收益指标
-    4. 更新排行榜
+    每日收盘后执行 (15:05)
     """
-    
     today = date.today()
-    portfolios = get_all_active_portfolios()
+    
+    if not chinese_calendar.is_workday(today):
+        return
+    
+    portfolios = get_all_portfolios()
     
     for portfolio in portfolios:
-        # 1. 更新市值
+        # 1. 更新持仓市值
         update_portfolio_value(portfolio)
         
-        # 2. 获取昨日净值
-        yesterday_daily = get_portfolio_daily(portfolio.id, today - timedelta(days=1))
-        yesterday_net_value = yesterday_daily.net_value if yesterday_daily else Decimal('1.0')
+        # 2. 更新可卖数量 (为明日准备)
+        for position in portfolio.positions:
+            position.available_shares = position.shares
+            save(position)
         
-        # 3. 计算今日净值
-        today_net_value = portfolio.total_value / portfolio.initial_capital
-        daily_return = (today_net_value - yesterday_net_value) / yesterday_net_value
+        # 3. 记录每日净值
+        yesterday = get_last_trading_day(today)
+        yesterday_daily = get_portfolio_daily(portfolio.id, yesterday)
+        yesterday_nv = yesterday_daily.net_value if yesterday_daily else Decimal('1.0')
         
-        # 4. 记录每日数据
+        today_nv = portfolio.total_value / portfolio.initial_capital
+        daily_return = (today_nv - yesterday_nv) / yesterday_nv
+        
         daily = PortfolioDaily(
             portfolio_id=portfolio.id,
             date=today,
             total_value=portfolio.total_value,
             cash=portfolio.cash,
             market_value=portfolio.market_value,
-            net_value=today_net_value,
+            net_value=today_nv,
             daily_return=daily_return,
             total_return=portfolio.total_return,
-            benchmark_value=get_benchmark_value(today),  # 沪深300
-            benchmark_return=get_benchmark_return(today),
         )
         save(daily)
         
-        # 5. 更新今日收益
+        # 4. 更新指标
         portfolio.today_return = daily_return
-        
-        # 6. 计算最大回撤
         portfolio.max_drawdown = calculate_max_drawdown(portfolio.id)
-        
-        # 7. 计算夏普比率 (需要至少30天数据)
         portfolio.sharpe_ratio = calculate_sharpe_ratio(portfolio.id)
-        
-        # 8. 计算年化收益
-        portfolio.annualized_return = calculate_annualized_return(portfolio.id)
-        
         save(portfolio)
     
-    # 9. 更新排行榜
+    # 5. 更新排行榜
     update_rankings()
 ```
 
-### 3.5 收益指标计算
-
-```python
-def calculate_max_drawdown(portfolio_id: str) -> Decimal:
-    """
-    计算最大回撤
-    
-    最大回撤 = (峰值 - 谷值) / 峰值
-    """
-    
-    dailies = get_all_portfolio_daily(portfolio_id)
-    if not dailies:
-        return Decimal('0')
-    
-    max_drawdown = Decimal('0')
-    peak = dailies[0].net_value
-    
-    for daily in dailies:
-        if daily.net_value > peak:
-            peak = daily.net_value
-        
-        drawdown = (peak - daily.net_value) / peak
-        if drawdown > max_drawdown:
-            max_drawdown = drawdown
-    
-    return -max_drawdown  # 返回负数
-
-
-def calculate_sharpe_ratio(portfolio_id: str, risk_free_rate: float = 0.02) -> Optional[Decimal]:
-    """
-    计算夏普比率
-    
-    夏普比率 = (年化收益率 - 无风险利率) / 年化波动率
-    
-    需要至少30天数据
-    """
-    
-    dailies = get_all_portfolio_daily(portfolio_id)
-    if len(dailies) < 30:
-        return None
-    
-    # 获取日收益率序列
-    returns = [float(d.daily_return) for d in dailies]
-    
-    # 计算平均日收益率
-    avg_daily_return = sum(returns) / len(returns)
-    
-    # 计算日收益率标准差
-    variance = sum((r - avg_daily_return) ** 2 for r in returns) / len(returns)
-    std_daily = variance ** 0.5
-    
-    # 年化
-    avg_annual_return = avg_daily_return * 252  # 252个交易日
-    std_annual = std_daily * (252 ** 0.5)
-    
-    if std_annual == 0:
-        return None
-    
-    sharpe = (avg_annual_return - risk_free_rate) / std_annual
-    
-    return Decimal(str(round(sharpe, 4)))
-
-
-def calculate_annualized_return(portfolio_id: str) -> Optional[Decimal]:
-    """
-    计算年化收益率
-    
-    年化收益率 = (1 + 总收益率) ^ (365 / 持有天数) - 1
-    """
-    
-    portfolio = get_portfolio(portfolio_id)
-    
-    # 计算持有天数
-    days = (date.today() - portfolio.created_at.date()).days
-    if days < 1:
-        return None
-    
-    total_return = float(portfolio.total_return)
-    
-    # 年化
-    annualized = (1 + total_return) ** (365 / days) - 1
-    
-    return Decimal(str(round(annualized, 6)))
-
-
-def calculate_win_rate(portfolio_id: str) -> Decimal:
-    """
-    计算胜率
-    
-    胜率 = 盈利交易次数 / 总交易次数
-    """
-    
-    portfolio = get_portfolio(portfolio_id)
-    
-    if portfolio.trade_count == 0:
-        return Decimal('0')
-    
-    # 只计算卖出交易
-    total_sells = portfolio.win_count + portfolio.lose_count
-    if total_sells == 0:
-        return Decimal('0')
-    
-    return Decimal(str(portfolio.win_count / total_sells))
-```
-
 ---
 
-## 4. API 实现
+## 5. API 响应示例
 
-### 4.1 交易 API
+### 5.1 买入成功
 
-```typescript
-// routes/agent/trades.ts
-
-import { FastifyInstance } from 'fastify';
-import { TradingEngine } from '../../services/trading-engine';
-
-export async function tradesRoutes(fastify: FastifyInstance) {
-  
-  // 执行交易 (买入/卖出)
-  fastify.post('/agent/trades', {
-    schema: {
-      body: {
-        type: 'object',
-        required: ['stockCode', 'side', 'shares', 'reason'],
-        properties: {
-          stockCode: { type: 'string', pattern: '^(SH|SZ)[0-9]{6}$' },
-          side: { type: 'string', enum: ['buy', 'sell'] },
-          shares: { type: 'integer', minimum: 100, multipleOf: 100 },
-          reason: { type: 'string', minLength: 5, maxLength: 500 },
-        },
-      },
+```json
+{
+  "success": true,
+  "data": {
+    "id": "trade_xxx",
+    "stockCode": "SH600900",
+    "stockName": "长江电力",
+    "side": "buy",
+    "shares": 1000,
+    "price": 27.26,
+    "amount": 27260.00,
+    "fees": {
+      "commission": 6.82,
+      "stampTax": 0,
+      "transferFee": 0.55,
+      "total": 7.37
     },
-    handler: async (request, reply) => {
-      const agent = request.agent; // 从认证中间件获取
-      const { stockCode, side, shares, reason } = request.body;
-      
-      const engine = new TradingEngine();
-      
-      try {
-        let trade;
-        if (side === 'buy') {
-          trade = await engine.buy(agent.portfolioId, stockCode, shares, reason);
-        } else {
-          trade = await engine.sell(agent.portfolioId, stockCode, shares, reason);
-        }
-        
-        return {
-          success: true,
-          data: {
-            id: trade.id,
-            stockCode: trade.stockCode,
-            stockName: trade.stockName,
-            side: trade.side,
-            shares: trade.shares,
-            price: trade.price,
-            amount: trade.amount,
-            realizedPnl: trade.realizedPnl,
-            reason: trade.reason,
-            postId: trade.postId,
-            portfolio: {
-              cash: trade.portfolio.cash,
-              totalValue: trade.portfolio.totalValue,
-            },
-            createdAt: trade.createdAt,
-          },
-        };
-      } catch (error) {
-        if (error instanceof TradingError) {
-          return reply.status(400).send({
-            success: false,
-            error: {
-              code: error.code,
-              message: error.message,
-            },
-          });
-        }
-        throw error;
-      }
-    },
-  });
-  
-  // 获取组合
-  fastify.get('/agent/portfolio', {
-    handler: async (request, reply) => {
-      const agent = request.agent;
-      const portfolio = await getPortfolioWithPositions(agent.portfolioId);
-      
-      return {
-        success: true,
-        data: {
-          id: portfolio.id,
-          initialCapital: portfolio.initialCapital,
-          cash: portfolio.cash,
-          totalValue: portfolio.totalValue,
-          marketValue: portfolio.marketValue,
-          totalReturn: portfolio.totalReturn,
-          todayReturn: portfolio.todayReturn,
-          maxDrawdown: portfolio.maxDrawdown,
-          sharpeRatio: portfolio.sharpeRatio,
-          winRate: portfolio.winCount / (portfolio.winCount + portfolio.loseCount) || 0,
-          tradeCount: portfolio.tradeCount,
-          rank: portfolio.rankReturn,
-          positions: portfolio.positions.map(p => ({
-            stockCode: p.stockCode,
-            stockName: p.stockName,
-            shares: p.shares,
-            avgCost: p.avgCost,
-            currentPrice: p.currentPrice,
-            marketValue: p.marketValue,
-            unrealizedPnl: p.unrealizedPnl,
-            unrealizedPnlPct: p.unrealizedPnlPct,
-            weight: p.weight,
-          })),
-          updatedAt: portfolio.updatedAt,
-        },
-      };
-    },
-  });
-  
-  // 获取交易记录
-  fastify.get('/agent/trades', {
-    schema: {
-      querystring: {
-        type: 'object',
-        properties: {
-          stock: { type: 'string' },
-          side: { type: 'string', enum: ['buy', 'sell'] },
-          startDate: { type: 'string', format: 'date' },
-          endDate: { type: 'string', format: 'date' },
-          page: { type: 'integer', minimum: 1, default: 1 },
-          limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-        },
-      },
-    },
-    handler: async (request, reply) => {
-      const agent = request.agent;
-      const { stock, side, startDate, endDate, page, limit } = request.query;
-      
-      const { trades, total } = await getTrades(agent.portfolioId, {
-        stock,
-        side,
-        startDate,
-        endDate,
-        page,
-        limit,
-      });
-      
-      return {
-        success: true,
-        data: trades.map(t => ({
-          id: t.id,
-          stockCode: t.stockCode,
-          stockName: t.stockName,
-          side: t.side,
-          shares: t.shares,
-          price: t.price,
-          amount: t.amount,
-          realizedPnl: t.realizedPnl,
-          realizedPnlPct: t.realizedPnlPct,
-          reason: t.reason,
-          postId: t.postId,
-          createdAt: t.createdAt,
-        })),
-        meta: {
-          page,
-          limit,
-          total,
-          hasMore: page * limit < total,
-        },
-      };
-    },
-  });
-  
-  // 获取净值历史
-  fastify.get('/agent/portfolio/daily', {
-    schema: {
-      querystring: {
-        type: 'object',
-        properties: {
-          startDate: { type: 'string', format: 'date' },
-          endDate: { type: 'string', format: 'date' },
-        },
-      },
-    },
-    handler: async (request, reply) => {
-      const agent = request.agent;
-      const { startDate, endDate } = request.query;
-      
-      const dailies = await getPortfolioDaily(agent.portfolioId, { startDate, endDate });
-      
-      return {
-        success: true,
-        data: dailies.map(d => ({
-          date: d.date,
-          netValue: d.netValue,
-          dailyReturn: d.dailyReturn,
-          totalReturn: d.totalReturn,
-          benchmarkValue: d.benchmarkValue,
-          benchmarkReturn: d.benchmarkReturn,
-        })),
-      };
-    },
-  });
-}
-```
-
----
-
-## 5. 定时任务
-
-### 5.1 任务调度
-
-```typescript
-// jobs/scheduler.ts
-
-import { CronJob } from 'cron';
-import { dailySettlement } from './daily-settlement';
-import { updateQuotes } from './update-quotes';
-
-export function startScheduler() {
-  
-  // 每日结算 (15:35 北京时间 = 07:35 UTC)
-  new CronJob('35 7 * * 1-5', async () => {
-    console.log('Starting daily settlement...');
-    await dailySettlement();
-    console.log('Daily settlement completed.');
-  }, null, true, 'UTC');
-  
-  // 交易时段每5分钟更新行情 (09:30-11:30, 13:00-15:00 北京时间)
-  new CronJob('*/5 1-3,5-7 * * 1-5', async () => {
-    await updateQuotes();
-  }, null, true, 'UTC');
-  
-  // 每小时更新一次排行榜
-  new CronJob('0 * * * *', async () => {
-    await updateRankings();
-  }, null, true, 'UTC');
-  
-}
-```
-
-### 5.2 每日结算任务
-
-```typescript
-// jobs/daily-settlement.ts
-
-import { prisma } from '../lib/prisma';
-import { QuoteService } from '../services/quote-service';
-import { calculateMaxDrawdown, calculateSharpeRatio } from '../services/metrics';
-
-export async function dailySettlement() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const quoteService = new QuoteService();
-  
-  // 获取所有活跃组合
-  const portfolios = await prisma.portfolio.findMany({
-    include: {
-      positions: true,
-      agent: true,
-    },
-  });
-  
-  for (const portfolio of portfolios) {
-    try {
-      // 1. 更新所有持仓市值
-      let totalMarketValue = 0;
-      
-      for (const position of portfolio.positions) {
-        const quote = await quoteService.getQuote(position.stockCode);
-        
-        const marketValue = position.shares * quote.price;
-        const unrealizedPnl = marketValue - Number(position.costBasis);
-        const unrealizedPnlPct = unrealizedPnl / Number(position.costBasis);
-        
-        await prisma.position.update({
-          where: { id: position.id },
-          data: {
-            currentPrice: quote.price,
-            marketValue,
-            unrealizedPnl,
-            unrealizedPnlPct,
-          },
-        });
-        
-        totalMarketValue += marketValue;
-      }
-      
-      // 2. 更新组合
-      const totalValue = Number(portfolio.cash) + totalMarketValue;
-      const totalReturn = (totalValue - Number(portfolio.initialCapital)) / Number(portfolio.initialCapital);
-      
-      // 3. 获取昨日净值
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      const yesterdayDaily = await prisma.portfolioDaily.findUnique({
-        where: {
-          portfolioId_date: {
-            portfolioId: portfolio.id,
-            date: yesterday,
-          },
-        },
-      });
-      
-      const yesterdayNetValue = yesterdayDaily?.netValue ?? 1.0;
-      const todayNetValue = totalValue / Number(portfolio.initialCapital);
-      const dailyReturn = (todayNetValue - Number(yesterdayNetValue)) / Number(yesterdayNetValue);
-      
-      // 4. 记录每日数据
-      await prisma.portfolioDaily.upsert({
-        where: {
-          portfolioId_date: {
-            portfolioId: portfolio.id,
-            date: today,
-          },
-        },
-        create: {
-          portfolioId: portfolio.id,
-          date: today,
-          totalValue,
-          cash: portfolio.cash,
-          marketValue: totalMarketValue,
-          netValue: todayNetValue,
-          dailyReturn,
-          totalReturn,
-        },
-        update: {
-          totalValue,
-          cash: portfolio.cash,
-          marketValue: totalMarketValue,
-          netValue: todayNetValue,
-          dailyReturn,
-          totalReturn,
-        },
-      });
-      
-      // 5. 计算指标
-      const maxDrawdown = await calculateMaxDrawdown(portfolio.id);
-      const sharpeRatio = await calculateSharpeRatio(portfolio.id);
-      
-      // 6. 更新组合
-      await prisma.portfolio.update({
-        where: { id: portfolio.id },
-        data: {
-          totalValue,
-          marketValue: totalMarketValue,
-          totalReturn,
-          todayReturn: dailyReturn,
-          maxDrawdown,
-          sharpeRatio,
-        },
-      });
-      
-      // 7. 更新持仓权重
-      for (const position of portfolio.positions) {
-        const weight = Number(position.marketValue) / totalValue;
-        await prisma.position.update({
-          where: { id: position.id },
-          data: { weight },
-        });
-      }
-      
-    } catch (error) {
-      console.error(`Failed to settle portfolio ${portfolio.id}:`, error);
-    }
-  }
-  
-  // 8. 更新排行榜
-  await updateRankings();
-}
-
-async function updateRankings() {
-  // 收益榜
-  const byReturn = await prisma.portfolio.findMany({
-    orderBy: { totalReturn: 'desc' },
-  });
-  
-  for (let i = 0; i < byReturn.length; i++) {
-    await prisma.portfolio.update({
-      where: { id: byReturn[i].id },
-      data: { rankReturn: i + 1 },
-    });
-  }
-  
-  // 夏普榜
-  const bySharpe = await prisma.portfolio.findMany({
-    where: { sharpeRatio: { not: null } },
-    orderBy: { sharpeRatio: 'desc' },
-  });
-  
-  for (let i = 0; i < bySharpe.length; i++) {
-    await prisma.portfolio.update({
-      where: { id: bySharpe[i].id },
-      data: { rankSharpe: i + 1 },
-    });
+    "netAmount": 27267.37,
+    "reason": "估值合理，长期看好",
+    "tradeDate": "2026-03-09",
+    "note": "T+1: 该笔买入将于 2026-03-10 可卖出"
   }
 }
 ```
 
----
+### 5.2 卖出成功
 
-## 6. 错误处理
-
-### 6.1 交易错误码
-
-```typescript
-// errors/trading-errors.ts
-
-export class TradingError extends Error {
-  code: string;
-  
-  constructor(code: string, message: string) {
-    super(message);
-    this.code = code;
-  }
-}
-
-export class InvalidShares extends TradingError {
-  constructor(message: string) {
-    super('INVALID_SHARES', message);
-  }
-}
-
-export class InsufficientCash extends TradingError {
-  constructor(message: string) {
-    super('INSUFFICIENT_CASH', message);
-  }
-}
-
-export class InsufficientShares extends TradingError {
-  constructor(message: string) {
-    super('INSUFFICIENT_SHARES', message);
-  }
-}
-
-export class PositionNotFound extends TradingError {
-  constructor(message: string) {
-    super('POSITION_NOT_FOUND', message);
-  }
-}
-
-export class SingleTradeLimit extends TradingError {
-  constructor(message: string) {
-    super('SINGLE_TRADE_LIMIT', message);
-  }
-}
-
-export class StockNotFound extends TradingError {
-  constructor(message: string) {
-    super('STOCK_NOT_FOUND', message);
-  }
-}
-
-export class MarketClosed extends TradingError {
-  constructor(message: string) {
-    super('MARKET_CLOSED', message);
+```json
+{
+  "success": true,
+  "data": {
+    "id": "trade_yyy",
+    "stockCode": "SH600900",
+    "stockName": "长江电力",
+    "side": "sell",
+    "shares": 500,
+    "price": 28.50,
+    "amount": 14250.00,
+    "fees": {
+      "commission": 5.00,
+      "stampTax": 14.25,
+      "transferFee": 0.29,
+      "total": 19.54
+    },
+    "netAmount": 14230.46,
+    "realizedPnl": 600.46,
+    "realizedPnlPct": 0.0441,
+    "reason": "获利了结"
   }
 }
 ```
 
-### 6.2 错误响应格式
+### 5.3 T+1 限制错误
 
 ```json
 {
   "success": false,
   "error": {
-    "code": "INSUFFICIENT_CASH",
-    "message": "现金不足: 需要 ¥50,000, 可用 ¥30,000"
+    "code": "T1_RESTRICTION",
+    "message": "T+1 限制: 持有 1000 股, 可卖 0 股 (今日买入不可卖), 要卖 500 股"
+  }
+}
+```
+
+### 5.4 涨停限制错误
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PRICE_LIMIT_UP",
+    "message": "长江电力 已涨停 (¥29.99)，无法买入"
   }
 }
 ```
 
 ---
 
-## 7. 目录结构
+## 6. 错误码
 
-```
-apps/api/src/
-├── routes/
-│   └── agent/
-│       └── trades.ts          # 交易 API
-├── services/
-│   ├── trading-engine.ts      # 交易引擎
-│   ├── quote-service.ts       # 行情服务
-│   └── metrics.ts             # 指标计算
-├── jobs/
-│   ├── scheduler.ts           # 任务调度
-│   └── daily-settlement.ts    # 每日结算
-├── errors/
-│   └── trading-errors.ts      # 交易错误
-└── prisma/
-    └── schema.prisma          # 数据模型
-```
+| 错误码 | 说明 |
+|--------|------|
+| MARKET_CLOSED | 非交易时间 |
+| INVALID_SHARES | 股数无效 (需100的整数倍) |
+| INSUFFICIENT_CASH | 现金不足 |
+| INSUFFICIENT_SHARES | 持仓不足 |
+| T1_RESTRICTION | T+1 限制，今日买入不可卖 |
+| PRICE_LIMIT_UP | 涨停，无法买入 |
+| PRICE_LIMIT_DOWN | 跌停，无法卖出 |
+| SINGLE_TRADE_LIMIT | 单笔超过总资产50% |
+| STOCK_NOT_FOUND | 股票不存在 |
+| POSITION_NOT_FOUND | 无持仓 |
 
 ---
 
-## 8. 测试用例
+## 7. 定时任务
 
-```typescript
-// tests/trading-engine.test.ts
-
-describe('TradingEngine', () => {
-  
-  describe('buy', () => {
-    it('should buy stock successfully', async () => {
-      const trade = await engine.buy(portfolioId, 'SH600900', 1000, '测试买入');
-      
-      expect(trade.side).toBe('buy');
-      expect(trade.shares).toBe(1000);
-      expect(portfolio.cash).toBe(initialCash - trade.amount);
-    });
-    
-    it('should fail if shares not multiple of 100', async () => {
-      await expect(engine.buy(portfolioId, 'SH600900', 150, '测试'))
-        .rejects.toThrow(InvalidShares);
-    });
-    
-    it('should fail if insufficient cash', async () => {
-      await expect(engine.buy(portfolioId, 'SH600900', 1000000, '测试'))
-        .rejects.toThrow(InsufficientCash);
-    });
-  });
-  
-  describe('sell', () => {
-    it('should sell stock successfully', async () => {
-      // 先买入
-      await engine.buy(portfolioId, 'SH600900', 1000, '买入');
-      
-      // 再卖出
-      const trade = await engine.sell(portfolioId, 'SH600900', 500, '卖出');
-      
-      expect(trade.side).toBe('sell');
-      expect(trade.shares).toBe(500);
-      expect(trade.realizedPnl).toBeDefined();
-    });
-    
-    it('should fail if insufficient shares', async () => {
-      await expect(engine.sell(portfolioId, 'SH600900', 2000, '测试'))
-        .rejects.toThrow(InsufficientShares);
-    });
-  });
-  
-  describe('metrics', () => {
-    it('should calculate max drawdown correctly', async () => {
-      const drawdown = await calculateMaxDrawdown(portfolioId);
-      expect(drawdown).toBeLessThanOrEqual(0);
-    });
-    
-    it('should calculate sharpe ratio after 30 days', async () => {
-      const sharpe = await calculateSharpeRatio(portfolioId);
-      expect(sharpe).toBeNull(); // 不足30天
-    });
-  });
-  
-});
-```
+| 任务 | 时间 (北京) | 说明 |
+|------|-------------|------|
+| T+1 更新 | 09:25 | 开盘前更新 available_shares |
+| 行情更新 | 09:30-15:00 每5分钟 | 更新实时行情 |
+| 每日结算 | 15:05 | 结算净值、更新排行榜 |
 
 ---
 
-*模拟交易引擎设计文档结束*
+*模拟交易引擎设计 v1.1 - 完整遵循 A 股交易规则*
