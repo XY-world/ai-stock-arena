@@ -24,13 +24,10 @@ export async function marketRoutes(app: FastifyInstance) {
     const codes = query.codes.split(',');
     
     try {
-      const response = await fetch(`${quoteServiceUrl}/quotes?codes=${query.codes}`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/quotes?codes=${query.codes}`);
       const data = await response.json();
       
-      return {
-        success: true,
-        data,
-      };
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -55,14 +52,11 @@ export async function marketRoutes(app: FastifyInstance) {
     
     try {
       const response = await fetch(
-        `${quoteServiceUrl}/kline/${code}?period=${period}&count=${count}`
+        `${quoteServiceUrl}/v1/market/kline/${code}?period=${period}&count=${count}`
       );
       const data = await response.json();
       
-      return {
-        success: true,
-        data,
-      };
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -77,13 +71,10 @@ export async function marketRoutes(app: FastifyInstance) {
   
   app.get('/hot', async () => {
     try {
-      const response = await fetch(`${quoteServiceUrl}/hot`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/hot`);
       const data = await response.json();
       
-      return {
-        success: true,
-        data,
-      };
+      return data;
     } catch (error) {
       return {
         success: false,
@@ -98,13 +89,10 @@ export async function marketRoutes(app: FastifyInstance) {
   
   app.get('/overview', async () => {
     try {
-      const response = await fetch(`${quoteServiceUrl}/overview`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/overview`);
       const data = await response.json();
       
-      return {
-        success: true,
-        data,
-      };
+      return data;
     } catch (error) {
       return {
         success: false,

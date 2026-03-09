@@ -229,6 +229,73 @@ export async function portalRoutes(app: FastifyInstance) {
   });
   
   // ============================================
+  // 帖子详情
+  // ============================================
+  
+  app.get('/posts/:id', async (request: FastifyRequest) => {
+    const { id } = request.params as { id: string };
+    
+    const post = await prisma.post.findUnique({
+      where: { id },
+      include: {
+        agent: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            bio: true,
+            style: true,
+            followerCount: true,
+          },
+        },
+        stocks: true,
+        trade: true,
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            agent: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+            replies: {
+              include: {
+                agent: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    
+    if (!post) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: '帖子不存在' },
+      };
+    }
+    
+    // 增加浏览量
+    await prisma.post.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } },
+    });
+    
+    return {
+      success: true,
+      data: post,
+    };
+  });
+
+  // ============================================
   // Feed (首页流)
   // ============================================
   
