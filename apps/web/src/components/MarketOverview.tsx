@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { fetcher, formatPercent, cn, safeFixed, toNumber } from '@/lib/utils';
+import { fetcher, cn, safeFixed, toNumber } from '@/lib/utils';
 
 interface MarketData {
   indices: Record<string, {
@@ -18,64 +18,62 @@ export function MarketOverview() {
   const { data, isLoading } = useSWR<MarketData>(
     '/v1/market/overview',
     fetcher,
-    { refreshInterval: 60000 }
+    { refreshInterval: 30000 }
   );
   
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border p-4">
-        <h3 className="font-semibold mb-3">📈 市场概况</h3>
-        <div className="text-gray-400 text-center py-4">加载中...</div>
+      <div className="animate-pulse space-y-2">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-8 bg-[var(--bg-hover)] rounded"></div>
+        ))}
       </div>
     );
   }
   
+  if (!data?.indices) {
+    return <div className="text-[var(--text-muted)] text-center py-4">暂无数据</div>;
+  }
+  
+  const indices = Object.entries(data.indices);
   const total = data.upCount + data.downCount + data.flatCount;
-  const upPct = (toNumber(data.upCount) / toNumber(total) * 100).toFixed(0);
+  const upPct = total > 0 ? (data.upCount / total * 100) : 50;
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4">
-      <h3 className="font-semibold mb-3">📈 市场概况</h3>
-      
-      {/* 指数 */}
-      <div className="space-y-2 mb-4">
-        {Object.entries(data.indices).map(([name, index]) => (
-          <div key={name} className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">{name}</span>
+    <div className="space-y-3">
+      {/* 指数列表 */}
+      {indices.map(([name, idx]) => {
+        const isUp = idx.changePct >= 0;
+        return (
+          <div key={name} className="flex items-center justify-between py-2 border-b border-[var(--border-light)] last:border-0">
+            <span className="text-sm text-[var(--text-secondary)]">{name}</span>
             <div className="text-right">
-              <span className="font-medium">{safeFixed(index.price)}</span>
-              <span className={cn(
-                'ml-2 text-sm',
-                index.changePct >= 0 ? 'text-up' : 'text-down'
-              )}>
-                {formatPercent(index.changePct)}
-              </span>
+              <div className={cn('font-medium tabular-nums', isUp ? 'text-up' : 'text-down')}>
+                {safeFixed(idx.price, 2)}
+              </div>
+              <div className={cn('text-xs tabular-nums', isUp ? 'text-up' : 'text-down')}>
+                {isUp ? '+' : ''}{safeFixed(toNumber(idx.changePct) * 100, 2)}%
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
       
-      {/* 涨跌家数 */}
-      <div className="border-t pt-3">
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-up">上涨 {data.upCount}</span>
-          <span className="text-gray-400">平盘 {data.flatCount}</span>
-          <span className="text-down">下跌 {data.downCount}</span>
+      {/* 涨跌分布 */}
+      <div className="pt-2">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-up">{data.upCount} 涨</span>
+          <span className="text-[var(--text-muted)]">{data.flatCount} 平</span>
+          <span className="text-down">{data.downCount} 跌</span>
         </div>
-        
-        {/* 涨跌比例条 */}
-        <div className="h-2 rounded-full overflow-hidden flex">
+        <div className="h-2 rounded-full overflow-hidden flex bg-[var(--bg-hover)]">
           <div 
-            className="bg-red-500" 
-            style={{ width: `${data.upCount / total * 100}%` }}
+            className="bg-red-500 transition-all" 
+            style={{ width: `${upPct}%` }}
           />
           <div 
-            className="bg-gray-300" 
-            style={{ width: `${data.flatCount / total * 100}%` }}
-          />
-          <div 
-            className="bg-green-500" 
-            style={{ width: `${data.downCount / total * 100}%` }}
+            className="bg-green-500 transition-all" 
+            style={{ width: `${100 - upPct}%` }}
           />
         </div>
       </div>

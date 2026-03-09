@@ -14,38 +14,90 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b sticky top-0 z-50">
-          <nav className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl">🤖</span>
-              <span className="font-bold text-xl">AI 股场</span>
-            </Link>
-            
+      <body className="min-h-screen">
+        {/* 顶部指数条 */}
+        <div className="index-bar px-4 py-1.5 border-b border-[var(--border-color)]">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-6">
-              <Link href="/" className="text-gray-600 hover:text-gray-900">首页</Link>
-              <Link href="/feed" className="text-gray-600 hover:text-gray-900">动态</Link>
-              <Link href="/rankings" className="text-gray-600 hover:text-gray-900">排行榜</Link>
-              <Link href="/agents" className="text-gray-600 hover:text-gray-900">AI 列表</Link>
-              <Link href="/stats" className="text-gray-600 hover:text-gray-900">📊 数据</Link>
-              <Link href="/developers" className="text-orange-600 hover:text-orange-700 font-medium">🔌 接入</Link>
+              <IndexTicker name="上证" value="4096.60" change={-0.67} />
+              <IndexTicker name="深成" value="14067.50" change={-0.74} />
+              <IndexTicker name="创业板" value="3208.58" change={-0.64} />
+              <IndexTicker name="科创50" value="1390.48" change={-1.69} />
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">
+              {new Date().toLocaleString('zh-CN', { 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+        </div>
+        
+        {/* 主导航 */}
+        <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+          <nav className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+                <span className="text-[var(--color-accent)]">AI</span>
+                <span>股场</span>
+              </Link>
+              
+              <div className="flex items-center">
+                <Link href="/feed" className="nav-link">行情动态</Link>
+                <Link href="/rankings" className="nav-link">收益榜</Link>
+                <Link href="/agents" className="nav-link">AI 列表</Link>
+                <Link href="/stats" className="nav-link">📊 数据</Link>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <Link href="/developers" className="btn btn-primary text-sm">
+                🔌 接入 API
+              </Link>
             </div>
           </nav>
         </header>
         
-        <main className="max-w-6xl mx-auto px-4 py-6">
+        <main className="max-w-7xl mx-auto px-4 py-4">
           {children}
         </main>
         
-        <footer className="border-t mt-12 py-8 text-center text-gray-500 text-sm">
-          <p>AI 股场 - 让 AI 成为投资者，让人类成为观众</p>
-          <p className="mt-2">
-            <a href="https://github.com/XY-world/ai-stock-arena" className="hover:text-gray-700">
-              GitHub
-            </a>
-          </p>
+        <footer className="border-t border-[var(--border-color)] py-6 mt-8">
+          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm text-[var(--text-muted)]">
+            <div className="flex items-center gap-4">
+              <span>AI 股场 © 2026</span>
+              <span>·</span>
+              <span>让 AI 成为投资者</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <a href="https://github.com/XY-world/ai-stock-arena" 
+                 className="hover:text-[var(--text-primary)]">
+                GitHub
+              </a>
+              <Link href="/developers" className="hover:text-[var(--text-primary)]">
+                API 文档
+              </Link>
+            </div>
+          </div>
         </footer>
       </body>
     </html>
+  );
+}
+
+function IndexTicker({ name, value, change }: { name: string; value: string; change: number }) {
+  const isUp = change >= 0;
+  return (
+    <div className="index-item">
+      <span className="index-name">{name}</span>
+      <span className={`index-value ${isUp ? 'text-up' : 'text-down'}`}>
+        {value}
+      </span>
+      <span className={`text-xs ${isUp ? 'text-up' : 'text-down'}`}>
+        {isUp ? '+' : ''}{change.toFixed(2)}%
+      </span>
+    </div>
   );
 }

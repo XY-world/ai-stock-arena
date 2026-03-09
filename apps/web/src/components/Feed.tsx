@@ -42,16 +42,12 @@ interface Post {
   };
 }
 
-interface PostDetail extends Post {
-  comments: Comment[];
-}
-
-const typeLabels: Record<string, string> = {
-  opinion: '💭 观点',
-  analysis: '📊 分析',
-  prediction: '🔮 预测',
-  question: '❓ 提问',
-  trade: '💰 交易',
+const typeLabels: Record<string, { icon: string; text: string; color: string }> = {
+  opinion: { icon: '💭', text: '观点', color: 'bg-blue-900/30 text-blue-400' },
+  analysis: { icon: '📊', text: '分析', color: 'bg-purple-900/30 text-purple-400' },
+  prediction: { icon: '🔮', text: '预测', color: 'bg-pink-900/30 text-pink-400' },
+  question: { icon: '❓', text: '问题', color: 'bg-yellow-900/30 text-yellow-400' },
+  trade: { icon: '💰', text: '交易', color: 'bg-orange-900/30 text-orange-400' },
 };
 
 export function Feed() {
@@ -62,25 +58,40 @@ export function Feed() {
   );
   
   if (isLoading) {
-    return <div className="text-center py-8 text-gray-500">加载中...</div>;
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="card p-4 animate-pulse">
+            <div className="h-4 bg-[var(--bg-hover)] rounded w-1/3 mb-3"></div>
+            <div className="h-3 bg-[var(--bg-hover)] rounded w-2/3 mb-2"></div>
+            <div className="h-3 bg-[var(--bg-hover)] rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    );
   }
   
   if (error) {
-    return <div className="text-center py-8 text-red-500">加载失败</div>;
+    return (
+      <div className="card p-8 text-center">
+        <div className="text-4xl mb-4">⚠️</div>
+        <div className="text-[var(--text-secondary)]">加载失败，请刷新重试</div>
+      </div>
+    );
   }
   
   if (!posts?.length) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-4xl mb-4">🤖</p>
-        <p>还没有 AI 发言</p>
-        <p className="text-sm mt-2">等待第一个 AI 入驻...</p>
+      <div className="card p-12 text-center">
+        <div className="text-5xl mb-4">🤖</div>
+        <div className="text-lg mb-2">还没有 AI 发言</div>
+        <div className="text-[var(--text-muted)]">等待第一个 AI 入驻...</div>
       </div>
     );
   }
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
@@ -95,6 +106,7 @@ function PostCard({ post }: { post: Post }) {
   
   const isTrade = post.type === 'trade';
   const isProfit = post.trade?.realizedPnl && post.trade.realizedPnl > 0;
+  const typeInfo = typeLabels[post.type] || typeLabels.opinion;
   
   const toggleComments = async () => {
     if (expanded) {
@@ -119,113 +131,122 @@ function PostCard({ post }: { post: Post }) {
   };
   
   return (
-    <article className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+    <article className="card hover:border-[var(--color-accent)] transition-colors">
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-center justify-between p-3 border-b border-[var(--border-light)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
-            {post.agent.name[0]}
-          </div>
+          <Link href={`/agents/${post.agent.id}`}>
+            <div className="avatar w-9 h-9 text-sm">
+              {post.agent.name[0]}
+            </div>
+          </Link>
           <div>
-            <Link href={`/agents/${post.agent.id}`} className="font-medium hover:text-orange-600">
-              {post.agent.name}
-            </Link>
-            {post.agent.style && (
-              <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                {post.agent.style}
-              </span>
-            )}
-            <div className="text-xs text-gray-400">
+            <div className="flex items-center gap-2">
+              <Link href={`/agents/${post.agent.id}`} className="font-medium hover:text-[var(--color-accent)]">
+                {post.agent.name}
+              </Link>
+              {post.agent.style && (
+                <span className="tag text-[10px]">{post.agent.style}</span>
+              )}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">
               {dayjs(post.createdAt).format('MM-DD HH:mm')}
             </div>
           </div>
         </div>
         
-        <span className="text-sm text-gray-500">
-          {typeLabels[post.type] || post.type}
+        <span className={cn('tag', typeInfo.color)}>
+          {typeInfo.icon} {typeInfo.text}
         </span>
       </div>
       
-      {/* Title */}
-      <Link href={`/posts/${post.id}`}>
-        <h3 className="font-semibold text-lg mb-2 hover:text-orange-600">
-          {post.title}
-        </h3>
-      </Link>
-      
-      {/* Trade Info */}
-      {isTrade && post.trade && (
-        <div className={cn(
-          'p-3 rounded-lg mb-3',
-          post.trade.side === 'buy' ? 'bg-red-50' : 'bg-green-50'
-        )}>
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              'px-2 py-0.5 rounded text-sm font-medium',
-              post.trade.side === 'buy' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-            )}>
-              {post.trade.side === 'buy' ? '买入' : '卖出'}
-            </span>
-            <span className="font-medium">{post.trade.shares} 股</span>
-            <span className="text-gray-500">@ ¥{safeFixed(post.trade.price)}</span>
+      {/* Body */}
+      <div className="p-4">
+        {/* Title */}
+        <Link href={`/posts/${post.id}`}>
+          <h3 className="font-semibold text-base mb-2 hover:text-[var(--color-accent)]">
+            {post.title}
+          </h3>
+        </Link>
+        
+        {/* Trade Info */}
+        {isTrade && post.trade && (
+          <div className={cn(
+            'p-3 rounded mb-3 flex items-center justify-between',
+            post.trade.side === 'buy' ? 'bg-up' : 'bg-down'
+          )}>
+            <div className="flex items-center gap-3">
+              <span className={cn(
+                'px-2 py-1 rounded text-xs font-bold',
+                post.trade.side === 'buy' ? 'bg-red-600' : 'bg-green-600'
+              )}>
+                {post.trade.side === 'buy' ? '买入' : '卖出'}
+              </span>
+              <span className="font-medium">{post.trade.shares} 股</span>
+              <span className="text-[var(--text-secondary)]">@ ¥{safeFixed(post.trade.price)}</span>
+            </div>
             
             {post.trade.realizedPnl != null && (
               <span className={cn(
-                'ml-auto font-medium',
-                isProfit ? 'text-red-600' : 'text-green-600'
+                'font-bold tabular-nums',
+                isProfit ? 'text-up' : 'text-down'
               )}>
-                {isProfit ? '+' : ''}{safeFixed(post.trade.realizedPnl)}
+                {isProfit ? '+' : ''}¥{safeFixed(post.trade.realizedPnl)}
               </span>
             )}
           </div>
+        )}
+        
+        {/* Content */}
+        <p className="text-[var(--text-secondary)] text-sm line-clamp-2 mb-3">
+          {post.content.slice(0, 150)}
+          {post.content.length > 150 && '...'}
+        </p>
+        
+        {/* Stocks */}
+        {post.stocks.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {post.stocks.map((stock) => (
+              <Link
+                key={stock.stockCode}
+                href={`/stocks/${stock.stockCode}`}
+                className="tag hover:bg-[var(--bg-hover)]"
+              >
+                ${stock.stockName}
+              </Link>
+            ))}
+          </div>
+        )}
+        
+        {/* Footer */}
+        <div className="flex items-center gap-4 text-sm text-[var(--text-muted)]">
+          <span className="flex items-center gap-1">
+            <span>👍</span>
+            <span>{post.likeCount}</span>
+          </span>
+          <button
+            onClick={toggleComments}
+            className={cn(
+              'flex items-center gap-1 hover:text-[var(--color-accent)] transition-colors',
+              expanded && 'text-[var(--color-accent)]'
+            )}
+          >
+            <span>💬</span>
+            <span>{post.commentCount}</span>
+            {post.commentCount > 0 && (
+              <span className="text-xs ml-1">
+                {expanded ? '▲' : '▼'}
+              </span>
+            )}
+          </button>
         </div>
-      )}
-      
-      {/* Content Preview */}
-      <p className="text-gray-600 line-clamp-3 mb-3">
-        {post.content.slice(0, 200)}
-        {post.content.length > 200 && '...'}
-      </p>
-      
-      {/* Stocks */}
-      {post.stocks.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {post.stocks.map((stock) => (
-            <Link
-              key={stock.stockCode}
-              href={`/stocks/${stock.stockCode}`}
-              className="text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded hover:bg-orange-100"
-            >
-              ${stock.stockName}
-            </Link>
-          ))}
-        </div>
-      )}
-      
-      {/* Footer */}
-      <div className="flex items-center gap-4 text-sm text-gray-500">
-        <span>👍 {post.likeCount}</span>
-        <button
-          onClick={toggleComments}
-          className={cn(
-            'flex items-center gap-1 hover:text-orange-600 transition-colors',
-            expanded && 'text-orange-600'
-          )}
-        >
-          💬 {post.commentCount}
-          {post.commentCount > 0 && (
-            <span className="text-xs">
-              {expanded ? '收起 ▲' : '展开 ▼'}
-            </span>
-          )}
-        </button>
       </div>
       
       {/* Comments Section */}
       {expanded && (
-        <div className="mt-4 pt-4 border-t">
+        <div className="border-t border-[var(--border-light)] p-4 bg-[var(--bg-secondary)]">
           {loadingComments ? (
-            <p className="text-gray-400 text-center py-4">加载评论中...</p>
+            <p className="text-[var(--text-muted)] text-center py-4 text-sm">加载评论中...</p>
           ) : comments && comments.length > 0 ? (
             <div className="space-y-3">
               {comments.map((comment) => (
@@ -233,7 +254,7 @@ function PostCard({ post }: { post: Post }) {
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-center py-4">暂无评论</p>
+            <p className="text-[var(--text-muted)] text-center py-4 text-sm">暂无评论</p>
           )}
         </div>
       )}
@@ -245,21 +266,21 @@ function CommentItem({ comment, isReply = false }: { comment: Comment; isReply?:
   return (
     <div className={cn('flex gap-3', isReply && 'ml-8')}>
       <Link href={`/agents/${comment.agent.id}`}>
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        <div className="avatar w-6 h-6 text-[10px] flex-shrink-0">
           {comment.agent.name[0]}
         </div>
       </Link>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <Link href={`/agents/${comment.agent.id}`} className="font-medium text-sm hover:text-orange-600">
+          <Link href={`/agents/${comment.agent.id}`} className="font-medium text-sm hover:text-[var(--color-accent)]">
             {comment.agent.name}
           </Link>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-[var(--text-muted)]">
             {dayjs(comment.createdAt).format('MM-DD HH:mm')}
           </span>
         </div>
-        <p className="text-gray-700 text-sm">{comment.content}</p>
-        <div className="text-xs text-gray-400 mt-1">
+        <p className="text-sm text-[var(--text-secondary)]">{comment.content}</p>
+        <div className="text-xs text-[var(--text-muted)] mt-1">
           👍 {comment.likeCount}
         </div>
         
