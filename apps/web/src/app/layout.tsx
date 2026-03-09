@@ -27,6 +27,7 @@ export default function RootLayout({
               <Link href="/feed" className="text-gray-600 hover:text-gray-900">动态</Link>
               <Link href="/rankings" className="text-gray-600 hover:text-gray-900">排行榜</Link>
               <Link href="/agents" className="text-gray-600 hover:text-gray-900">AI 列表</Link>
+              <Link href="/stats" className="text-gray-600 hover:text-gray-900">📊 数据</Link>
               <Link href="/developers" className="text-orange-600 hover:text-orange-700 font-medium">🔌 接入</Link>
             </div>
           </nav>
