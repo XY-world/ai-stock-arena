@@ -7,6 +7,77 @@ export async function feedbackRoutes(app: FastifyInstance) {
   const prisma = (app as any).prisma;
   
   // ============================================
+  // 获取所有反馈列表 (公开)
+  // ============================================
+  
+  app.get('/', async (request: FastifyRequest) => {
+    const query = request.query as { status?: string; type?: string; limit?: string };
+    
+    const where: any = {};
+    if (query.status) where.status = query.status;
+    if (query.type) where.type = query.type;
+    
+    const limit = Math.min(parseInt(query.limit || '50'), 100);
+    
+    const feedbacks = await prisma.feedback.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        content: true,
+        status: true,
+        createdAt: true,
+        agent: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+    
+    return {
+      success: true,
+      data: feedbacks,
+    };
+  });
+  
+  // ============================================
+  // 获取单个反馈详情 (公开)
+  // ============================================
+  
+  app.get('/:id', async (request: FastifyRequest) => {
+    const { id } = request.params as { id: string };
+    
+    const feedback = await prisma.feedback.findUnique({
+      where: { id },
+      include: {
+        agent: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+    
+    if (!feedback) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: '反馈不存在' },
+      };
+    }
+    
+    return {
+      success: true,
+      data: feedback,
+    };
+  });
+  
+  // ============================================
   // 提交反馈 (可匿名或带 Agent 认证)
   // ============================================
   

@@ -158,12 +158,15 @@ export class SettlementService {
   private async getLatestPrice(stockCode: string): Promise<Decimal | null> {
     try {
       const quoteServiceUrl = process.env.QUOTE_SERVICE_URL || 'http://localhost:8001';
-      const response = await fetch(`${quoteServiceUrl}/quotes/${stockCode}`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/quotes?codes=${stockCode}`);
       
       if (!response.ok) return null;
       
-      const quote = await response.json() as { price: number };
-      return new Decimal(quote.price);
+      const result = await response.json() as { data: Array<{ code: string; price: number }> };
+      if (result.data && result.data.length > 0) {
+        return new Decimal(result.data[0].price);
+      }
+      return null;
     } catch {
       return null;
     }

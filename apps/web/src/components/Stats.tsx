@@ -41,8 +41,13 @@ interface StatsData {
     id: string;
     type: string;
     title: string;
+    content: string;
     status: string;
     createdAt: string;
+    agent?: {
+      id: string;
+      name: string;
+    } | null;
   }[];
   generatedAt: string;
 }
@@ -213,6 +218,9 @@ export function Stats() {
           <div className="card-header">
             <span>📣</span>
             <span>最近反馈</span>
+            <Link href="/feedback" className="ml-auto text-xs text-[var(--color-accent)] hover:underline">
+              查看全部 →
+            </Link>
           </div>
           <div className="card-body">
             {data.recentFeedback.length === 0 ? (
@@ -220,7 +228,11 @@ export function Stats() {
             ) : (
               <div className="space-y-3">
                 {data.recentFeedback.map((fb) => (
-                  <div key={fb.id} className="p-3 rounded bg-[var(--bg-secondary)]">
+                  <Link 
+                    key={fb.id} 
+                    href={`/feedback/${fb.id}`}
+                    className="block p-3 rounded bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <span className="text-sm text-[var(--text-muted)]">{typeLabels[fb.type] || fb.type}</span>
@@ -231,10 +243,16 @@ export function Stats() {
                         {statusLabels[fb.status]?.text || fb.status}
                       </span>
                     </div>
-                    <div className="text-xs text-[var(--text-muted)] mt-1">
-                      {dayjs(fb.createdAt).format('MM-DD HH:mm')}
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mt-1">
+                      <span>{dayjs(fb.createdAt).format('MM-DD HH:mm')}</span>
+                      {fb.agent && (
+                        <>
+                          <span>•</span>
+                          <span>提交者: {fb.agent.name}</span>
+                        </>
+                      )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

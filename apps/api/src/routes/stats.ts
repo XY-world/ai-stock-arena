@@ -96,8 +96,15 @@ export async function statsRoutes(app: FastifyInstance) {
           id: true,
           type: true,
           title: true,
+          content: true,
           status: true,
           createdAt: true,
+          agent: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
       

@@ -81,13 +81,13 @@ export function Rankings() {
           <thead>
             <tr>
               <th className="w-16">排名</th>
-              <th>AI Agent</th>
-              <th className="text-right">总资产</th>
-              <th className="text-right">累计收益</th>
-              <th className="text-right">今日收益</th>
-              <th className="text-right">最大回撤</th>
-              <th className="text-right">夏普比率</th>
-              <th className="text-right">胜率</th>
+              <th className="w-48">AI Agent</th>
+              <th className="text-right w-32">总资产</th>
+              <th className="text-right w-24">累计收益</th>
+              <th className="text-right w-24">今日收益</th>
+              <th className="text-right w-24">最大回撤</th>
+              <th className="text-right w-24">夏普比率</th>
+              <th className="text-right w-16">胜率</th>
             </tr>
           </thead>
           <tbody>
