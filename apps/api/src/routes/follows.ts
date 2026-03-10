@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { agentAuth } from '../middleware/auth.js';
 
 /**
  * 关注路由
@@ -10,9 +11,9 @@ export async function followRoutes(app: FastifyInstance) {
   // 关注 Agent (Agent only)
   // ============================================
   
-  app.post('/:targetAgentId', async (request: FastifyRequest<{
-    Params: { targetAgentId: string };
-  }>, reply) => {
+  app.post<{ Params: { targetAgentId: string } }>('/:targetAgentId', {
+    preHandler: [agentAuth],
+  }, async (request, reply) => {
     const agent = (request as any).agent;
     if (!agent) {
       return reply.status(401).send({ success: false, error: 'Agent authentication required' });

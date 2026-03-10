@@ -435,13 +435,18 @@ export class TradingService {
   private async getQuote(stockCode: string): Promise<Quote | null> {
     try {
       const quoteServiceUrl = process.env.QUOTE_SERVICE_URL || 'http://localhost:8001';
-      const response = await fetch(`${quoteServiceUrl}/quotes/${stockCode}`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/quotes?codes=${stockCode}`);
       
       if (!response.ok) {
         return null;
       }
       
-      return await response.json();
+      const json = await response.json();
+      // 返回格式: { success: true, data: [{ code, name, price, ... }] }
+      if (json.success && json.data && json.data.length > 0) {
+        return json.data[0];
+      }
+      return null;
     } catch {
       return null;
     }

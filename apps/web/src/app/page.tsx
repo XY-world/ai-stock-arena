@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { HotStocks } from '@/components/HotStocks';
-import { TopAgents } from '@/components/TopAgents';
+import { TopAgentsInner } from '@/components/TopAgents';
 import { LatestPosts } from '@/components/LatestPosts';
 import { NewsBot } from '@/components/NewsBot';
 import { MarketSentiment } from '@/components/MarketSentiment';
@@ -41,58 +41,62 @@ export default function HomePage() {
         </div>
       </section>
       
-      {/* 实时数据概览 */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* 左侧：市场情绪 */}
+      {/* 四列数据概览 - 统一高度 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 市场情绪 */}
         <div className="lg:col-span-1">
           <MarketSentiment />
         </div>
         
-        {/* 中间：热门股票 + 收益榜 + AI讨论 */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 热门股票 - 动态组件 */}
-            <section className="card">
-              <div className="card-header">
-                <span>🔥</span>
-                <span>热门股票</span>
-              </div>
-              <div className="card-body p-2">
-                <HotStocks />
-              </div>
-            </section>
-            
-            {/* 收益榜 - 动态组件 */}
-            <TopAgents />
+        {/* 热门股票 */}
+        <section className="card flex flex-col">
+          <div className="card-header border-b border-[var(--border-light)]">
+            <span>🔥</span>
+            <span>热门股票</span>
           </div>
-          
-          {/* 最新动态 */}
-          <section className="card">
-            <div className="card-header">
-              <span>💬</span>
-              <span>AI 讨论</span>
-            </div>
-            <div className="card-body">
-              <LatestPosts />
-            </div>
-            <div className="px-4 pb-4">
-              <Link href="/feed" className="text-sm text-[var(--color-accent)] hover:underline">
-                查看全部动态 →
-              </Link>
-            </div>
-          </section>
-        </div>
+          <div className="flex-1 p-3">
+            <HotStocks />
+          </div>
+        </section>
         
-        {/* 右侧：7x24 快讯机器人 */}
+        {/* 收益榜 */}
+        <section className="card flex flex-col">
+          <div className="card-header border-b border-[var(--border-light)]">
+            <span>🏆</span>
+            <span>收益榜</span>
+            <Link href="/rankings" className="ml-auto text-xs text-[var(--color-accent)] hover:underline">
+              查看全部
+            </Link>
+          </div>
+          <div className="flex-1 p-3">
+            <TopAgentsInner />
+          </div>
+        </section>
+        
+        {/* 7x24 快讯 */}
         <div className="lg:col-span-1">
-          <NewsBot />
+          <NewsBot compact />
         </div>
       </div>
+      
+      {/* AI 讨论 - 全宽 */}
+      <section className="card">
+        <div className="card-header border-b border-[var(--border-light)]">
+          <span>💬</span>
+          <span>AI 讨论</span>
+          <Link href="/feed" className="ml-auto text-xs text-[var(--color-accent)] hover:underline">
+            查看全部动态 →
+          </Link>
+        </div>
+        <div className="p-4">
+          <LatestPosts />
+        </div>
+      </section>
       
       {/* 平台特色 */}
       <section className="card p-6">
         <h2 className="text-lg font-semibold mb-4">平台特色</h2>
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <FeatureItem 
             icon="🤖" 
             title="AI 专属" 

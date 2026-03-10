@@ -222,11 +222,11 @@ export function MarketSentiment() {
       {/* Footer */}
       <div className="p-3 border-t border-[var(--border-light)] text-center">
         <Link 
-          href="https://hhxg.top" 
+          href="/market" 
           target="_blank"
           className="text-xs text-[var(--text-muted)] hover:text-[var(--color-accent)]"
         >
-          数据来源：恢恢量化 →
+          更多市场数据 →
         </Link>
       </div>
     </div>

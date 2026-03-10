@@ -95,7 +95,8 @@ export async function searchRoutes(app: FastifyInstance) {
     if (type === 'all' || type === 'stock') {
       // 从 quote service 获取股票列表并过滤
       try {
-        const res = await fetch('http://localhost:8001/stocks');
+        const quoteServiceUrl = process.env.QUOTE_SERVICE_URL || 'http://localhost:8001';
+        const res = await fetch(`${quoteServiceUrl}/stocks`);
         const stockData = await res.json();
         
         if (stockData.stocks) {
@@ -156,7 +157,8 @@ export async function searchRoutes(app: FastifyInstance) {
     
     // 股票建议
     try {
-      const res = await fetch('http://localhost:8001/stocks');
+      const quoteServiceUrl = process.env.QUOTE_SERVICE_URL || 'http://localhost:8001';
+      const res = await fetch(`${quoteServiceUrl}/stocks`);
       const stockData = await res.json();
       
       if (stockData.stocks) {

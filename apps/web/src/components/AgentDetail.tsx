@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, cn, safeFixed, toNumber } from '@/lib/utils';
+import { fetcher, cn, safeFixed, toNumber, formatMoney } from '@/lib/utils';
 import dayjs from 'dayjs';
 
 interface AgentDetailProps {
@@ -108,7 +108,7 @@ export function AgentDetail({ agentId }: AgentDetailProps) {
             <div className="text-right">
               <div className="text-sm text-[var(--text-muted)] mb-1">总资产</div>
               <div className="text-2xl font-bold mb-2">
-                ¥{safeFixed(portfolio.totalValue, 0)}
+                {formatMoney(portfolio.totalValue)}
               </div>
               <div className="flex items-center gap-4">
                 <div>
@@ -168,14 +168,14 @@ function OverviewTab({ agent }: { agent: any }) {
   }
   
   const stats = [
-    { label: '初始资金', value: `¥${safeFixed(portfolio.initialCapital, 0)}` },
-    { label: '现金', value: `¥${safeFixed(portfolio.cash, 0)}` },
-    { label: '持仓市值', value: `¥${safeFixed(portfolio.marketValue, 0)}` },
+    { label: '初始资金', value: formatMoney(portfolio.initialCapital) },
+    { label: '现金', value: formatMoney(portfolio.cash) },
+    { label: '持仓市值', value: formatMoney(portfolio.marketValue) },
     { label: '最大回撤', value: `${safeFixed(toNumber(portfolio.maxDrawdown) * 100, 2)}%`, negative: true },
     { label: '夏普比率', value: portfolio.sharpeRatio ? safeFixed(portfolio.sharpeRatio, 2) : '-' },
     { label: '交易次数', value: portfolio.tradeCount || 0 },
     { label: '胜率', value: portfolio.tradeCount > 0 ? `${safeFixed(portfolio.winCount / portfolio.tradeCount * 100, 1)}%` : '-' },
-    { label: '总手续费', value: `¥${safeFixed(portfolio.totalCommission, 2)}` },
+    { label: '总手续费', value: formatMoney(portfolio.totalCommission) },
   ];
   
   return (
@@ -299,9 +299,9 @@ function PositionsTab({ agentId }: { agentId: string }) {
                   <td className="text-right tabular-nums">{pos.availableShares}</td>
                   <td className="text-right tabular-nums">{safeFixed(pos.avgCost, 2)}</td>
                   <td className="text-right tabular-nums">{safeFixed(pos.currentPrice, 2)}</td>
-                  <td className="text-right tabular-nums">¥{safeFixed(pos.marketValue, 0)}</td>
+                  <td className="text-right tabular-nums">{formatMoney(pos.marketValue)}</td>
                   <td className={cn('text-right tabular-nums font-medium', isUp ? 'text-up' : 'text-down')}>
-                    {isUp ? '+' : ''}¥{safeFixed(pos.unrealizedPnl, 2)}
+                    {isUp ? '+' : ''}{formatMoney(pos.unrealizedPnl)}
                   </td>
                   <td className={cn('text-right tabular-nums font-medium', isUp ? 'text-up' : 'text-down')}>
                     {isUp ? '+' : ''}{safeFixed(pnlPct, 2)}%
@@ -382,10 +382,10 @@ function TradesTab({ agentId }: { agentId: string }) {
                   </td>
                   <td className="text-right tabular-nums">{trade.shares}</td>
                   <td className="text-right tabular-nums">{safeFixed(trade.price, 2)}</td>
-                  <td className="text-right tabular-nums">¥{safeFixed(trade.amount, 0)}</td>
-                  <td className="text-right tabular-nums text-[var(--text-muted)]">¥{safeFixed(trade.totalFee, 2)}</td>
+                  <td className="text-right tabular-nums">{formatMoney(trade.amount)}</td>
+                  <td className="text-right tabular-nums text-[var(--text-muted)]">{formatMoney(trade.totalFee)}</td>
                   <td className={cn('text-right tabular-nums font-medium', hasPnl ? (isProfit ? 'text-up' : 'text-down') : '')}>
-                    {hasPnl ? `${isProfit ? '+' : ''}¥${safeFixed(trade.realizedPnl, 2)}` : '-'}
+                    {hasPnl ? formatMoney(trade.realizedPnl) : '-'}
                   </td>
                   <td className="text-sm text-[var(--text-secondary)] max-w-[200px] truncate">{trade.reason}</td>
                 </tr>

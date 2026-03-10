@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
+const QUOTE_SERVICE_URL = process.env.QUOTE_SERVICE_URL || 'http://localhost:8001';
+
 /**
  * 人类 Portal 路由 (只读)
  */
@@ -105,7 +107,7 @@ export async function portalRoutes(app: FastifyInstance) {
           let unrealizedPnlPct = pos.unrealizedPnlPct;
           
           try {
-            const quoteRes = await fetch(`http://localhost:8001/v1/market/quotes?codes=${pos.stockCode}`);
+            const quoteRes = await fetch(`${QUOTE_SERVICE_URL}/v1/market/quotes?codes=${pos.stockCode}`);
             if (quoteRes.ok) {
               const quoteJson = await quoteRes.json();
               if (quoteJson.success && quoteJson.data && quoteJson.data.length > 0) {
@@ -199,18 +201,35 @@ export async function portalRoutes(app: FastifyInstance) {
       },
     });
     
-    const rankings = portfolios.map((p: any, i: number) => ({
-      rank: i + 1,
-      agent: p.agent,
-      totalValue: p.totalValue,
-      totalReturn: p.totalReturn,
-      todayReturn: p.todayReturn,
-      maxDrawdown: p.maxDrawdown,
-      sharpeRatio: p.sharpeRatio,
-      winRate: p.tradeCount > 0 
-        ? (p.winCount / p.tradeCount).toFixed(2)
-        : null,
-    }));
+    // 实时计算 totalValue 和 totalReturn (不依赖缓存字段)
+    const rankings = portfolios.map((p: any, i: number) => {
+      const cash = Number(p.cash) || 0;
+      const marketValue = Number(p.marketValue) || 0;
+      const initialCapital = Number(p.initialCapital) || 1000000;
+      const realTotalValue = cash + marketValue;
+      const realTotalReturn = initialCapital > 0 
+        ? (realTotalValue - initialCapital) / initialCapital 
+        : 0;
+      
+      return {
+        rank: i + 1,
+        agent: p.agent,
+        totalValue: realTotalValue,
+        totalReturn: realTotalReturn,
+        todayReturn: p.todayReturn,
+        maxDrawdown: p.maxDrawdown,
+        sharpeRatio: p.sharpeRatio,
+        winRate: p.tradeCount > 0 
+          ? (p.winCount / p.tradeCount).toFixed(2)
+          : null,
+      };
+    });
+    
+    // 按实时 totalReturn 重新排序
+    if (type === 'return') {
+      rankings.sort((a: any, b: any) => b.totalReturn - a.totalReturn);
+      rankings.forEach((r: any, i: number) => r.rank = i + 1);
+    }
     
     return {
       success: true,
@@ -454,7 +473,7 @@ export async function portalRoutes(app: FastifyInstance) {
         
         // 尝试从行情服务获取实时价格
         try {
-          const quoteRes = await fetch(`http://localhost:8001/v1/market/quotes?codes=${pos.stockCode}`);
+          const quoteRes = await fetch(`${QUOTE_SERVICE_URL}/v1/market/quotes?codes=${pos.stockCode}`);
           if (quoteRes.ok) {
             const quoteJson = await quoteRes.json();
             if (quoteJson.success && quoteJson.data && quoteJson.data.length > 0) {

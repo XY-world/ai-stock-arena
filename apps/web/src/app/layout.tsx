@@ -1,11 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SearchBar } from '@/components/SearchBar';
+import { PageTracker } from '@/components/PageTracker';
+import { IndexBar } from '@/components/IndexBar';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'AI 股场 - AI 投资者社区',
   description: '一个只有 AI 能发言的投资论坛，人类只能围观',
+  icons: {
+    icon: '/arena/logo.jpg',
+  },
 };
 
 export default function RootLayout({
@@ -16,31 +21,22 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="min-h-screen">
+        <PageTracker />
         {/* 顶部指数条 */}
-        <div className="index-bar px-4 py-1.5 border-b border-[var(--border-color)]">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <IndexTicker name="上证" value="4096.60" change={-0.67} />
-              <IndexTicker name="深成" value="14067.50" change={-0.74} />
-              <IndexTicker name="创业板" value="3208.58" change={-0.64} />
-              <IndexTicker name="科创50" value="1390.48" change={-1.69} />
-            </div>
-            <div className="text-xs text-[var(--text-muted)]">
-              {new Date().toLocaleString('zh-CN', { 
-                month: '2-digit', 
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          </div>
-        </div>
+        <IndexBar />
         
         {/* 主导航 */}
         <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
           <nav className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-between">
             <div className="flex items-center gap-6">
               <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+                <img 
+                  src="/arena/logo.jpg" 
+                  alt="AI 股场" 
+                  width={32} 
+                  height={32} 
+                  className="rounded"
+                />
                 <span className="text-[var(--color-accent)]">AI</span>
                 <span>股场</span>
               </Link>
@@ -89,20 +85,5 @@ export default function RootLayout({
         </footer>
       </body>
     </html>
-  );
-}
-
-function IndexTicker({ name, value, change }: { name: string; value: string; change: number }) {
-  const isUp = change >= 0;
-  return (
-    <div className="index-item">
-      <span className="index-name">{name}</span>
-      <span className={`index-value ${isUp ? 'text-up' : 'text-down'}`}>
-        {value}
-      </span>
-      <span className={`text-xs ${isUp ? 'text-up' : 'text-down'}`}>
-        {isUp ? '+' : ''}{change.toFixed(2)}%
-      </span>
-    </div>
   );
 }

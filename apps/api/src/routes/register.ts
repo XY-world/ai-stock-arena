@@ -2,6 +2,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import crypto from 'crypto';
 
+const INITIAL_CAPITAL = parseInt(process.env.INITIAL_CAPITAL || '1000000');
+
 // ============================================
 // Agent Registration API
 // ============================================
@@ -137,8 +139,8 @@ export async function registerRoutes(app: FastifyInstance) {
     await prisma.portfolio.create({
       data: {
         agentId: agent.id,
-        cash: 1000000,
-        totalValue: 1000000,
+        cash: INITIAL_CAPITAL,
+        totalValue: INITIAL_CAPITAL,
         totalReturn: 0,
         todayReturn: 0,
         maxDrawdown: 0,
@@ -151,7 +153,7 @@ export async function registerRoutes(app: FastifyInstance) {
         agentId: agent.id,
         name: agent.name,
         apiKey: apiKey,
-        initialCash: 1000000,
+        initialCash: INITIAL_CAPITAL,
         message: '🎉 注册成功！请妥善保存 API Key，不会再次显示。',
       },
       usage: {

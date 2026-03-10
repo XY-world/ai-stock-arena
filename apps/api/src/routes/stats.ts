@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { getStats, incrementPageView } from '../services/stats.js';
 
 /**
  * 运营统计路由
  */
 export async function statsRoutes(app: FastifyInstance) {
   const prisma = (app as any).prisma;
-  const redis = (app as any).redis;
   
   // ============================================
   // 运营概览
@@ -32,6 +32,7 @@ export async function statsRoutes(app: FastifyInstance) {
       activeAgentsToday,
       topAgentsByPosts,
       recentFeedback,
+      apiStats,
     ] = await Promise.all([
       // 总量
       prisma.agent.count({ where: { isActive: true } }),
@@ -99,54 +100,10 @@ export async function statsRoutes(app: FastifyInstance) {
           createdAt: true,
         },
       }),
+      
+      // API 调用和页面访问统计
+      getStats(),
     ]);
-    
-    // 从 Redis 获取 API 调用统计
-    let apiCalls = {
-      today: 0,
-      total: 0,
-    };
-    
-    try {
-      const todayKey = `stats:api:${todayStart.toISOString().slice(0, 10)}`;
-      const todayCalls = await redis.get(todayKey);
-      apiCalls.today = parseInt(todayCalls || '0');
-      
-      // 获取总调用量（累加最近30天）
-      let total = 0;
-      for (let i = 0; i < 30; i++) {
-        const date = new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000);
-        const key = `stats:api:${date.toISOString().slice(0, 10)}`;
-        const count = await redis.get(key);
-        total += parseInt(count || '0');
-      }
-      apiCalls.total = total;
-    } catch (e) {
-      // Redis 不可用时忽略
-    }
-    
-    // 页面访问量
-    let pageViews = {
-      today: 0,
-      total: 0,
-    };
-    
-    try {
-      const todayKey = `stats:pv:${todayStart.toISOString().slice(0, 10)}`;
-      const todayPv = await redis.get(todayKey);
-      pageViews.today = parseInt(todayPv || '0');
-      
-      let total = 0;
-      for (let i = 0; i < 30; i++) {
-        const date = new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000);
-        const key = `stats:pv:${date.toISOString().slice(0, 10)}`;
-        const count = await redis.get(key);
-        total += parseInt(count || '0');
-      }
-      pageViews.total = total;
-    } catch (e) {
-      // Redis 不可用时忽略
-    }
     
     return {
       success: true,
@@ -175,9 +132,9 @@ export async function statsRoutes(app: FastifyInstance) {
           avgDailyPosts: Math.round(weekPosts / 7 * 10) / 10,
         },
         
-        // API & 页面
-        apiCalls,
-        pageViews,
+        // API & 页面统计
+        apiCalls: apiStats.apiCalls,
+        pageViews: apiStats.pageViews,
         
         // 排行
         topAgentsByPosts,
@@ -233,5 +190,15 @@ export async function statsRoutes(app: FastifyInstance) {
       success: true,
       data: trends,
     };
+  });
+  
+  // ============================================
+  // 页面访问追踪
+  // ============================================
+  
+  app.post('/pageview', async (request: FastifyRequest<{ Body: { path?: string } }>) => {
+    const path = request.body?.path || '_total';
+    await incrementPageView(path);
+    return { success: true };
   });
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, cn, safeFixed, toNumber } from '@/lib/utils';
+import { fetcher, cn, safeFixed, toNumber, formatMoney } from '@/lib/utils';
 
 type RankType = 'return' | 'sharpe' | 'drawdown';
 
@@ -126,7 +126,7 @@ export function Rankings() {
                     </Link>
                   </td>
                   <td className="text-right font-medium tabular-nums">
-                    ¥{safeFixed(item.totalValue, 0)}
+                    {formatMoney(item.totalValue)}
                   </td>
                   <td className={cn('text-right font-bold tabular-nums', isUp ? 'text-up' : 'text-down')}>
                     {isUp ? '+' : ''}{safeFixed(totalReturn, 2)}%

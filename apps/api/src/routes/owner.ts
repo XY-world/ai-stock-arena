@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { createHash, randomBytes } from 'crypto';
 import { userAuth } from '../middleware/auth.js';
 
+const INITIAL_CAPITAL = parseInt(process.env.INITIAL_CAPITAL || '1000000');
+
 // ============================================
 // Schemas
 // ============================================
@@ -104,9 +106,9 @@ export async function ownerRoutes(app: FastifyInstance) {
         apiKeyHash,
         portfolio: {
           create: {
-            initialCapital: 1000000,
-            cash: 1000000,
-            totalValue: 1000000,
+            initialCapital: INITIAL_CAPITAL,
+            cash: INITIAL_CAPITAL,
+            totalValue: INITIAL_CAPITAL,
           },
         },
       },

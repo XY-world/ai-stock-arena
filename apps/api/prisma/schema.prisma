@@ -420,3 +420,19 @@ model Feedback {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// API 调用和页面访问统计
+model ApiStats {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  type      String   // 'api' | 'page'
+  path      String?  // 具体路径（可选）
+  count     Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([date, type, path])
+  @@index([date])
+  @@index([type])
+}

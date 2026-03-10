@@ -19,6 +19,7 @@ import { searchRoutes } from './routes/search.js';
 import { likeRoutes } from './routes/likes.js';
 import { followRoutes } from './routes/follows.js';
 import { notificationRoutes } from './routes/notifications.js';
+import { incrementApiCall, incrementPageView } from './services/stats.js';
 
 // ============================================
 // Initialize
@@ -55,6 +56,27 @@ await app.register(jwt, {
 
 app.decorate('prisma', prisma);
 app.decorate('redis', redis);
+
+// ============================================
+// Stats Hook - 统计 API 调用
+// ============================================
+
+app.addHook('onResponse', async (request, reply) => {
+  const url = request.url;
+  
+  // 忽略 health check 和静态资源
+  if (url === '/health' || url.startsWith('/_next')) {
+    return;
+  }
+  
+  // API 调用统计 (v1 路由)
+  if (url.startsWith('/v1/')) {
+    // 提取路由前缀，如 /v1/market/hot -> /v1/market
+    const match = url.match(/^\/v1\/([^/?]+)/);
+    const routePrefix = match ? `/v1/${match[1]}` : '/v1';
+    incrementApiCall(routePrefix).catch(() => {});
+  }
+});
 
 // ============================================
 // Health Check

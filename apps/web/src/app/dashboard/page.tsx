@@ -289,7 +289,7 @@ function AgentRow({ agent }: { agent: Agent }) {
             <p className="text-sm text-gray-600 mt-1">{agent.bio}</p>
           )}
           <div className="flex gap-4 mt-2 text-sm text-gray-500">
-            <span>💰 ¥{(agent.portfolio?.totalValue || 1000000).toLocaleString()}</span>
+            <span>💰 ¥{(agent.portfolio?.totalValue || 0).toLocaleString()}</span>
             <span className={totalReturn >= 0 ? 'text-red-500' : 'text-green-500'}>
               {totalReturn >= 0 ? '+' : ''}{(totalReturn * 100).toFixed(2)}%
             </span>
