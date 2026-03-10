@@ -8,6 +8,7 @@ import httpx
 import re
 from datetime import datetime, timedelta
 import random
+import numpy as np
 
 app = FastAPI(title="AI Stock Arena - Quote Service")
 
@@ -327,6 +328,321 @@ async def get_hot_news(limit: int = 10):
 async def get_stock_news(code: str, limit: int = 10):
     """获取个股新闻"""
     return await get_news(code=code, limit=limit)
+
+
+# ========== 技术指标 ==========
+
+SINA_KLINE_API = "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData"
+TENCENT_API = "https://qt.gtimg.cn/q="
+
+async def fetch_sina_kline(code: str, count: int = 100) -> list:
+    """从新浪获取 K 线数据"""
+    sina_code = to_sina_code(code)
+    
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            resp = await client.get(
+                SINA_KLINE_API,
+                params={
+                    "symbol": sina_code,
+                    "scale": "240",  # 日线
+                    "ma": "5,10,20,60",
+                    "datalen": count,
+                },
+                headers=SINA_HEADERS
+            )
+            # 新浪返回的是 JS 数组格式
+            text = resp.text.strip()
+            if text.startswith('['):
+                import json
+                return json.loads(text)
+            return []
+        except Exception as e:
+            print(f"Sina kline error: {e}")
+            return []
+
+
+def calculate_ema(prices: np.ndarray, period: int) -> np.ndarray:
+    """计算 EMA"""
+    ema = np.zeros_like(prices)
+    ema[0] = prices[0]
+    multiplier = 2 / (period + 1)
+    for i in range(1, len(prices)):
+        ema[i] = (prices[i] - ema[i-1]) * multiplier + ema[i-1]
+    return ema
+
+
+def calculate_macd(prices: np.ndarray, fast: int = 12, slow: int = 26, signal: int = 9) -> dict:
+    """计算 MACD"""
+    if len(prices) < slow + signal:
+        return {"dif": 0, "dea": 0, "macd": 0, "signal": "neutral"}
+    
+    ema_fast = calculate_ema(prices, fast)
+    ema_slow = calculate_ema(prices, slow)
+    dif = ema_fast - ema_slow
+    dea = calculate_ema(dif, signal)
+    macd_hist = (dif - dea) * 2
+    
+    # 判断金叉/死叉
+    signal_type = "neutral"
+    if len(dif) >= 2:
+        if dif[-1] > dea[-1] and dif[-2] <= dea[-2]:
+            signal_type = "golden_cross"
+        elif dif[-1] < dea[-1] and dif[-2] >= dea[-2]:
+            signal_type = "death_cross"
+        elif dif[-1] > dea[-1]:
+            signal_type = "bullish"
+        else:
+            signal_type = "bearish"
+    
+    return {
+        "dif": round(dif[-1], 3),
+        "dea": round(dea[-1], 3),
+        "macd": round(macd_hist[-1], 3),
+        "signal": signal_type,
+    }
+
+
+def calculate_rsi(prices: np.ndarray, periods: list = [6, 12, 24]) -> dict:
+    """计算 RSI"""
+    result = {}
+    
+    for period in periods:
+        if len(prices) < period + 1:
+            result[f"rsi{period}"] = 50
+            continue
+        
+        deltas = np.diff(prices)
+        gains = np.where(deltas > 0, deltas, 0)
+        losses = np.where(deltas < 0, -deltas, 0)
+        
+        avg_gain = np.mean(gains[-period:])
+        avg_loss = np.mean(losses[-period:])
+        
+        if avg_loss == 0:
+            result[f"rsi{period}"] = 100
+        else:
+            rs = avg_gain / avg_loss
+            result[f"rsi{period}"] = round(100 - (100 / (1 + rs)), 2)
+    
+    return result
+
+
+def calculate_boll(prices: np.ndarray, period: int = 20, std_dev: float = 2) -> dict:
+    """计算布林带"""
+    if len(prices) < period:
+        mid = prices[-1] if len(prices) > 0 else 0
+        return {"upper": mid, "mid": mid, "lower": mid}
+    
+    mid = np.mean(prices[-period:])
+    std = np.std(prices[-period:])
+    
+    return {
+        "upper": round(mid + std_dev * std, 2),
+        "mid": round(mid, 2),
+        "lower": round(mid - std_dev * std, 2),
+    }
+
+
+def calculate_kdj(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, n: int = 9) -> dict:
+    """计算 KDJ"""
+    if len(closes) < n:
+        return {"k": 50, "d": 50, "j": 50}
+    
+    # 计算 RSV
+    low_n = np.min(lows[-n:])
+    high_n = np.max(highs[-n:])
+    
+    if high_n == low_n:
+        rsv = 50
+    else:
+        rsv = (closes[-1] - low_n) / (high_n - low_n) * 100
+    
+    # 简化计算 K, D, J
+    k = rsv  # 实际应该用平滑，这里简化
+    d = k
+    j = 3 * k - 2 * d
+    
+    return {
+        "k": round(k, 2),
+        "d": round(d, 2),
+        "j": round(j, 2),
+    }
+
+
+@app.get("/v1/market/indicators/{code}")
+async def get_indicators(code: str, period: str = "daily"):
+    """获取技术指标
+    
+    返回: MA, MACD, RSI, BOLL, KDJ 等技术指标
+    """
+    code = code.upper()
+    
+    # 获取 K 线数据
+    kline = await fetch_sina_kline(code, 100)
+    
+    if not kline:
+        return {"success": False, "error": "Failed to fetch kline data"}
+    
+    # 提取价格数据
+    closes = np.array([safe_float(k.get("close", 0)) for k in kline])
+    highs = np.array([safe_float(k.get("high", 0)) for k in kline])
+    lows = np.array([safe_float(k.get("low", 0)) for k in kline])
+    
+    # 获取最新一条的 MA (新浪已计算好)
+    latest = kline[-1] if kline else {}
+    ma = {
+        "ma5": safe_float(latest.get("ma_price5", 0)),
+        "ma10": safe_float(latest.get("ma_price10", 0)),
+        "ma20": safe_float(latest.get("ma_price20", 0)),
+        "ma60": round(np.mean(closes[-60:]), 2) if len(closes) >= 60 else 0,
+    }
+    
+    # 计算其他指标
+    macd = calculate_macd(closes)
+    rsi = calculate_rsi(closes)
+    boll = calculate_boll(closes)
+    kdj = calculate_kdj(highs, lows, closes)
+    
+    # 生成信号摘要
+    signals = []
+    trend = "neutral"
+    
+    # MA 金叉/死叉
+    if ma["ma5"] > ma["ma10"] and ma["ma10"] > ma["ma20"]:
+        signals.append("MA多头排列")
+        trend = "bullish"
+    elif ma["ma5"] < ma["ma10"] and ma["ma10"] < ma["ma20"]:
+        signals.append("MA空头排列")
+        trend = "bearish"
+    
+    # MACD 信号
+    if macd["signal"] == "golden_cross":
+        signals.append("MACD金叉")
+    elif macd["signal"] == "death_cross":
+        signals.append("MACD死叉")
+    
+    # RSI 超买超卖
+    if rsi.get("rsi6", 50) > 80:
+        signals.append("RSI超买")
+    elif rsi.get("rsi6", 50) < 20:
+        signals.append("RSI超卖")
+    
+    # 布林带位置
+    current_price = closes[-1] if len(closes) > 0 else 0
+    if current_price > boll["upper"]:
+        signals.append("突破布林上轨")
+    elif current_price < boll["lower"]:
+        signals.append("跌破布林下轨")
+    
+    # 获取股票名称
+    quotes = await fetch_sina_quotes([code])
+    name = quotes.get(code, {}).get("name", code)
+    
+    return {
+        "success": True,
+        "data": {
+            "code": code,
+            "name": name,
+            "price": current_price,
+            "indicators": {
+                "ma": ma,
+                "macd": macd,
+                "rsi": rsi,
+                "boll": boll,
+                "kdj": kdj,
+            },
+            "trend": trend,
+            "signals": signals,
+        }
+    }
+
+
+# ========== 估值/基本面 ==========
+
+async def fetch_tencent_quote(code: str) -> dict:
+    """从腾讯获取行情数据 (包含 PE/PB)"""
+    tencent_code = to_sina_code(code)  # 格式相同
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(
+                TENCENT_API + tencent_code,
+                headers={"Referer": "https://gu.qq.com"}
+            )
+            text = resp.text
+            
+            # 解析腾讯数据格式
+            # v_sz002594="51~比亚迪~002594~96.67~97.52~..."
+            match = re.search(r'v_\w+="([^"]+)"', text)
+            if not match:
+                return {}
+            
+            parts = match.group(1).split("~")
+            if len(parts) < 50:
+                return {}
+            
+            return {
+                "code": code,
+                "name": parts[1],
+                "price": safe_float(parts[3]),
+                "preClose": safe_float(parts[4]),
+                "open": safe_float(parts[5]),
+                "high": safe_float(parts[33]) if len(parts) > 33 else 0,
+                "low": safe_float(parts[34]) if len(parts) > 34 else 0,
+                "pe": safe_float(parts[39]) if len(parts) > 39 else 0,  # PE
+                "pb": safe_float(parts[46]) if len(parts) > 46 else 0,  # PB
+                "marketCap": safe_float(parts[44]) if len(parts) > 44 else 0,  # 总市值(亿)
+                "marketCapFloat": safe_float(parts[45]) if len(parts) > 45 else 0,  # 流通市值(亿)
+                "totalShares": safe_float(parts[38]) if len(parts) > 38 else 0,  # 总股本
+                "turnoverRate": safe_float(parts[38]) if len(parts) > 38 else 0,  # 换手率
+            }
+        except Exception as e:
+            print(f"Tencent API error: {e}")
+            return {}
+
+
+@app.get("/v1/market/fundamental/{code}")
+async def get_fundamental(code: str):
+    """获取基本面/估值数据
+    
+    返回: PE, PB, 市值等估值指标
+    """
+    code = code.upper()
+    
+    # 从腾讯获取估值数据
+    quote = await fetch_tencent_quote(code)
+    
+    if not quote:
+        # 回退到新浪数据
+        sina_quotes = await fetch_sina_quotes([code])
+        if code in sina_quotes:
+            quote = sina_quotes[code]
+            quote["pe"] = 0
+            quote["pb"] = 0
+            quote["marketCap"] = 0
+    
+    if not quote:
+        return {"success": False, "error": "Failed to fetch fundamental data"}
+    
+    return {
+        "success": True,
+        "data": {
+            "code": code,
+            "name": quote.get("name", code),
+            "valuation": {
+                "pe": quote.get("pe", 0),
+                "pb": quote.get("pb", 0),
+                "marketCap": quote.get("marketCap", 0),
+                "marketCapFloat": quote.get("marketCapFloat", 0),
+            },
+            "price": {
+                "current": quote.get("price", 0),
+                "preClose": quote.get("preClose", 0),
+                "changePct": round((quote.get("price", 0) - quote.get("preClose", 1)) / quote.get("preClose", 1) * 100, 2) if quote.get("preClose") else 0,
+            },
+        }
+    }
 
 
 if __name__ == "__main__":

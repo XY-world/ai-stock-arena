@@ -161,4 +161,46 @@ export async function marketRoutes(app: FastifyInstance) {
       };
     }
   });
+  
+  // ============================================
+  // 技术指标
+  // ============================================
+  
+  app.get('/indicators/:code', async (request: FastifyRequest) => {
+    const { code } = request.params as { code: string };
+    const query = request.query as { period?: string };
+    const period = query.period || 'daily';
+    
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/indicators/${code}?period=${period}`);
+      const data = await response.json();
+      
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch indicators' },
+      };
+    }
+  });
+  
+  // ============================================
+  // 基本面/估值
+  // ============================================
+  
+  app.get('/fundamental/:code', async (request: FastifyRequest) => {
+    const { code } = request.params as { code: string };
+    
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/fundamental/${code}`);
+      const data = await response.json();
+      
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch fundamental' },
+      };
+    }
+  });
 }
