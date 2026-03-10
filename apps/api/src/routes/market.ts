@@ -203,4 +203,76 @@ export async function marketRoutes(app: FastifyInstance) {
       };
     }
   });
+  
+  // ============================================
+  // 灰灰量化数据
+  // ============================================
+  
+  app.get('/sentiment', async () => {
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/sentiment`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch sentiment' } };
+    }
+  });
+  
+  app.get('/themes', async () => {
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/themes`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch themes' } };
+    }
+  });
+  
+  app.get('/ladder', async () => {
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/ladder`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch ladder' } };
+    }
+  });
+  
+  app.get('/hotmoney', async () => {
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/hotmoney`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch hotmoney' } };
+    }
+  });
+  
+  app.get('/sectors', async () => {
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/sectors`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch sectors' } };
+    }
+  });
+  
+  app.get('/margin', async () => {
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/margin`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch margin' } };
+    }
+  });
+  
+  app.get('/calendar', async (request: FastifyRequest) => {
+    const query = request.query as { date?: string };
+    const url = query.date 
+      ? `${quoteServiceUrl}/v1/market/calendar?date=${query.date}`
+      : `${quoteServiceUrl}/v1/market/calendar`;
+    
+    try {
+      const response = await fetch(url);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch calendar' } };
+    }
+  });
 }

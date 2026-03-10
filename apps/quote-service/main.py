@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import re
+import json
 from datetime import datetime, timedelta
 import random
 import numpy as np
@@ -642,6 +643,234 @@ async def get_fundamental(code: str):
                 "changePct": round((quote.get("price", 0) - quote.get("preClose", 1)) / quote.get("preClose", 1) * 100, 2) if quote.get("preClose") else 0,
             },
         }
+    }
+
+
+# ========== 灰灰量化数据 (hhxg.top) ==========
+
+import subprocess
+import os
+
+HHXG_DIR = os.path.join(os.path.dirname(__file__), "hhxg")
+
+def run_hhxg_script(script: str, args: list = None) -> dict:
+    """运行灰灰量化脚本并返回 JSON"""
+    cmd = ["python3", os.path.join(HHXG_DIR, script), "--json"]
+    if args:
+        cmd.extend(args)
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        output = result.stdout
+        
+        # 跳过 NOTE 行，找到 JSON
+        lines = output.strip().split('\n')
+        json_start = 0
+        for i, line in enumerate(lines):
+            if line.strip().startswith('{'):
+                json_start = i
+                break
+        
+        json_text = '\n'.join(lines[json_start:])
+        return json.loads(json_text)
+    except Exception as e:
+        print(f"HHXG script error: {e}")
+        return None
+
+
+# 缓存
+_hhxg_cache = {}
+_hhxg_cache_time = {}
+
+def get_hhxg_cached(key: str, script: str, args: list = None, ttl: int = 3600) -> dict:
+    """带缓存的灰灰数据获取"""
+    now = datetime.now()
+    
+    if key in _hhxg_cache and key in _hhxg_cache_time:
+        if (now - _hhxg_cache_time[key]).seconds < ttl:
+            return _hhxg_cache[key]
+    
+    data = run_hhxg_script(script, args)
+    if data:
+        _hhxg_cache[key] = data
+        _hhxg_cache_time[key] = now
+    
+    return data
+
+
+@app.get("/v1/market/sentiment")
+async def get_sentiment():
+    """获取市场情绪
+    
+    返回: 赚钱效应、涨跌家数、涨停数、炸板率等
+    """
+    data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch sentiment data"}
+    
+    market = data.get("market", {})
+    ai_summary = data.get("ai_summary", {})
+    
+    # 解析涨跌家数
+    buckets = market.get("buckets", [])
+    up_count = sum(b.get("count", 0) for b in buckets if b.get("pct_min", 0) > 0)
+    down_count = sum(b.get("count", 0) for b in buckets if b.get("pct_max", 0) < 0)
+    flat_count = sum(b.get("count", 0) for b in buckets if b.get("pct_min", 0) <= 0 <= b.get("pct_max", 0))
+    
+    return {
+        "success": True,
+        "data": {
+            "date": data.get("date"),
+            "summary": ai_summary.get("market_state", ""),
+            "focus": ai_summary.get("focus_direction", ""),
+            "sentiment": {
+                "index": market.get("sentiment_index", 0),
+                "label": market.get("sentiment_label", ""),
+                "upCount": up_count,
+                "downCount": down_count,
+                "flatCount": flat_count,
+                "total": market.get("total", 0),
+            },
+            "highlights": {
+                "theme": ai_summary.get("theme_focus", ""),
+                "hotmoney": ai_summary.get("hotmoney_state", ""),
+                "news": ai_summary.get("news_highlight", ""),
+            }
+        }
+    }
+
+
+@app.get("/v1/market/themes")
+async def get_themes():
+    """获取热门题材"""
+    data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch themes data"}
+    
+    hot_themes = data.get("hot_themes", [])
+    
+    return {
+        "success": True,
+        "data": {
+            "date": data.get("date"),
+            "themes": [
+                {
+                    "name": t.get("name", ""),
+                    "limitUpCount": t.get("limitup_count", 0),
+                    "netFlow": t.get("net_yi", 0),
+                    "topStocks": [s.get("name") for s in t.get("top_stocks", [])[:3]],
+                }
+                for t in hot_themes[:10]
+            ]
+        }
+    }
+
+
+@app.get("/v1/market/ladder")
+async def get_ladder():
+    """获取连板天梯"""
+    data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch ladder data"}
+    
+    ladder = data.get("ladder", {})
+    ladder_detail = data.get("ladder_detail", [])
+    
+    return {
+        "success": True,
+        "data": {
+            "date": data.get("date"),
+            "totalLimitUp": ladder.get("total_limit_up", 0),
+            "maxStreak": ladder.get("max_streak", 0),
+            "topStreak": ladder.get("top_streak", {}),
+            "levels": ladder_detail,
+        }
+    }
+
+
+@app.get("/v1/market/hotmoney")
+async def get_hotmoney():
+    """获取游资龙虎榜"""
+    data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch hotmoney data"}
+    
+    hotmoney = data.get("hotmoney", {})
+    
+    return {
+        "success": True,
+        "data": {
+            "date": data.get("date"),
+            "totalNetBuy": hotmoney.get("total_net_yi", 0),
+            "topNetBuy": hotmoney.get("top_net_buy", [])[:10],
+            "seats": hotmoney.get("seats", [])[:5],
+        }
+    }
+
+
+@app.get("/v1/market/sectors")
+async def get_sectors():
+    """获取行业资金流向"""
+    data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch sectors data"}
+    
+    sectors = data.get("sectors", [])
+    
+    # 找到行业分类
+    industry = next((s for s in sectors if s.get("label") == "行业"), {})
+    concept = next((s for s in sectors if s.get("label") == "板块"), {})
+    
+    return {
+        "success": True,
+        "data": {
+            "date": data.get("date"),
+            "industry": {
+                "inflow": industry.get("strong", [])[:5],
+                "outflow": industry.get("weak", [])[:5],
+            },
+            "concept": {
+                "inflow": concept.get("strong", [])[:5],
+                "outflow": concept.get("weak", [])[:5],
+            },
+        }
+    }
+
+
+@app.get("/v1/market/margin")
+async def get_margin():
+    """获取融资融券数据"""
+    data = get_hhxg_cached("margin", "margin.py", ttl=3600)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch margin data"}
+    
+    return {
+        "success": True,
+        "data": data
+    }
+
+
+@app.get("/v1/market/calendar")
+async def get_calendar(date: str = None):
+    """获取 A 股日历"""
+    args = []
+    if date:
+        args = ["trading", date]
+    
+    data = get_hhxg_cached(f"calendar_{date or 'week'}", "stock_calendar.py", args, ttl=86400)
+    
+    if not data:
+        return {"success": False, "error": "Failed to fetch calendar data"}
+    
+    return {
+        "success": True,
+        "data": data
     }
 
 
