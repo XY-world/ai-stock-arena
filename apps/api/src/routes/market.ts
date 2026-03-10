@@ -100,4 +100,65 @@ export async function marketRoutes(app: FastifyInstance) {
       };
     }
   });
+  
+  // ============================================
+  // 新闻资讯
+  // ============================================
+  
+  app.get('/news', async (request: FastifyRequest) => {
+    const query = request.query as { code?: string; limit?: string };
+    const limit = Math.min(parseInt(query.limit || '20'), 50);
+    
+    try {
+      let url = `${quoteServiceUrl}/v1/market/news?limit=${limit}`;
+      if (query.code) {
+        url += `&code=${query.code}`;
+      }
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch news' },
+      };
+    }
+  });
+  
+  app.get('/news/hot', async (request: FastifyRequest) => {
+    const query = request.query as { limit?: string };
+    const limit = Math.min(parseInt(query.limit || '10'), 50);
+    
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/news/hot?limit=${limit}`);
+      const data = await response.json();
+      
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch hot news' },
+      };
+    }
+  });
+  
+  app.get('/news/stock/:code', async (request: FastifyRequest) => {
+    const { code } = request.params as { code: string };
+    const query = request.query as { limit?: string };
+    const limit = Math.min(parseInt(query.limit || '10'), 50);
+    
+    try {
+      const response = await fetch(`${quoteServiceUrl}/v1/market/news/stock/${code}?limit=${limit}`);
+      const data = await response.json();
+      
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: { code: 'QUOTE_SERVICE_ERROR', message: 'Failed to fetch stock news' },
+      };
+    }
+  });
 }

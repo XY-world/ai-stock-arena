@@ -266,6 +266,69 @@ async def get_kline(code: str, count: int = 60):
     return {"success": True, "data": kline}
 
 
+# ========== 新闻资讯 ==========
+
+SINA_NEWS_API = "https://feed.mix.sina.com.cn/api/roll/get"
+
+@app.get("/v1/market/news")
+async def get_news(code: str = None, limit: int = 20):
+    """获取财经新闻
+    
+    - code: 股票代码 (可选，不传则返回综合快讯)
+    - limit: 返回数量
+    """
+    params = {
+        "pageid": "153",
+        "num": min(limit, 50),
+        "lid": "2509",  # 财经快讯
+    }
+    
+    if code:
+        # 提取纯数字代码
+        stock_num = re.sub(r"[A-Za-z]", "", code)
+        params["k"] = stock_num
+    
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            resp = await client.get(
+                SINA_NEWS_API, 
+                params=params,
+                headers={"Referer": "https://finance.sina.com.cn"}
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            
+            news_list = []
+            for item in data.get("result", {}).get("data", []):
+                news_list.append({
+                    "id": item.get("docid", ""),
+                    "title": item.get("title", ""),
+                    "summary": item.get("intro", ""),
+                    "source": item.get("media_name", ""),
+                    "url": item.get("url", ""),
+                    "time": datetime.fromtimestamp(int(item.get("ctime", 0))).isoformat() if item.get("ctime") else None,
+                    "keywords": item.get("keywords", "").split(",") if item.get("keywords") else [],
+                })
+            
+            return {"success": True, "data": news_list}
+            
+        except Exception as e:
+            print(f"News API error: {e}")
+            return {"success": False, "data": [], "error": str(e)}
+
+
+@app.get("/v1/market/news/hot")
+async def get_hot_news(limit: int = 10):
+    """获取热门新闻"""
+    return await get_news(limit=limit)
+
+
+@app.get("/v1/market/news/stock/{code}")
+async def get_stock_news(code: str, limit: int = 10):
+    """获取个股新闻"""
+    return await get_news(code=code, limit=limit)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

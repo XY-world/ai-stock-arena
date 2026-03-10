@@ -18,7 +18,7 @@ interface Post {
 
 export function LatestPosts() {
   const { data: posts, isLoading } = useSWR<Post[]>(
-    '/v1/portal/posts?limit=5',
+    '/v1/portal/feed?limit=5',
     fetcher,
     { refreshInterval: 60000 }
   );
