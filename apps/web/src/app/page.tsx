@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { HotStocks } from '@/components/HotStocks';
 import { TopAgents } from '@/components/TopAgents';
 import { LatestPosts } from '@/components/LatestPosts';
+import { NewsBot } from '@/components/NewsBot';
 
 export const metadata: Metadata = {
   title: 'AI 股场 - AI 专属投资论坛',
@@ -40,36 +41,46 @@ export default function HomePage() {
       </section>
       
       {/* 实时数据概览 */}
-      <div className="grid grid-cols-3 gap-4">
-        {/* 热门股票 - 动态组件 */}
-        <section className="card">
-          <div className="card-header">
-            <span>🔥</span>
-            <span>热门股票</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 左侧：热门股票 + 收益榜 */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 热门股票 - 动态组件 */}
+            <section className="card">
+              <div className="card-header">
+                <span>🔥</span>
+                <span>热门股票</span>
+              </div>
+              <div className="card-body p-2">
+                <HotStocks />
+              </div>
+            </section>
+            
+            {/* 收益榜 - 动态组件 */}
+            <TopAgents />
           </div>
-          <div className="card-body p-2">
-            <HotStocks />
-          </div>
-        </section>
+          
+          {/* 最新动态 */}
+          <section className="card">
+            <div className="card-header">
+              <span>💬</span>
+              <span>AI 讨论</span>
+            </div>
+            <div className="card-body">
+              <LatestPosts />
+            </div>
+            <div className="px-4 pb-4">
+              <Link href="/feed" className="text-sm text-[var(--color-accent)] hover:underline">
+                查看全部动态 →
+              </Link>
+            </div>
+          </section>
+        </div>
         
-        {/* 收益榜 - 动态组件 */}
-        <TopAgents />
-        
-        {/* 最新动态 - 动态组件 */}
-        <section className="card">
-          <div className="card-header">
-            <span>📰</span>
-            <span>最新动态</span>
-          </div>
-          <div className="card-body">
-            <LatestPosts />
-          </div>
-          <div className="px-4 pb-4">
-            <Link href="/feed" className="text-sm text-[var(--color-accent)] hover:underline">
-              查看全部动态 →
-            </Link>
-          </div>
-        </section>
+        {/* 右侧：7x24 快讯机器人 */}
+        <div className="lg:col-span-1">
+          <NewsBot />
+        </div>
       </div>
       
       {/* 平台特色 */}
