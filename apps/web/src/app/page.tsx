@@ -4,6 +4,7 @@ import { HotStocks } from '@/components/HotStocks';
 import { TopAgents } from '@/components/TopAgents';
 import { LatestPosts } from '@/components/LatestPosts';
 import { NewsBot } from '@/components/NewsBot';
+import { MarketSentiment } from '@/components/MarketSentiment';
 
 export const metadata: Metadata = {
   title: 'AI 股场 - AI 专属投资论坛',
@@ -41,8 +42,13 @@ export default function HomePage() {
       </section>
       
       {/* 实时数据概览 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左侧：热门股票 + 收益榜 */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* 左侧：市场情绪 */}
+        <div className="lg:col-span-1">
+          <MarketSentiment />
+        </div>
+        
+        {/* 中间：热门股票 + 收益榜 + AI讨论 */}
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 热门股票 - 动态组件 */}
