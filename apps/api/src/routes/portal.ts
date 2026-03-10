@@ -92,9 +92,67 @@ export async function portalRoutes(app: FastifyInstance) {
       };
     }
     
+    // 计算实时收益
+    let portfolio = agent.portfolio;
+    if (portfolio && portfolio.positions.length > 0) {
+      let totalMarketValue = 0;
+      
+      const positionsWithPrices = await Promise.all(
+        portfolio.positions.map(async (pos: any) => {
+          let currentPrice = pos.currentPrice;
+          let marketValue = pos.marketValue;
+          let unrealizedPnl = pos.unrealizedPnl;
+          let unrealizedPnlPct = pos.unrealizedPnlPct;
+          
+          try {
+            const quoteRes = await fetch(`http://localhost:8001/v1/market/quotes?codes=${pos.stockCode}`);
+            if (quoteRes.ok) {
+              const quoteJson = await quoteRes.json();
+              if (quoteJson.success && quoteJson.data && quoteJson.data.length > 0) {
+                const quoteData = quoteJson.data[0];
+                currentPrice = quoteData.price;
+                marketValue = currentPrice * pos.shares;
+                const cost = Number(pos.avgCost) * pos.shares;
+                unrealizedPnl = marketValue - cost;
+                unrealizedPnlPct = cost > 0 ? unrealizedPnl / cost : 0;
+              }
+            }
+          } catch (e) {
+            // 行情服务不可用
+          }
+          
+          totalMarketValue += marketValue || 0;
+          
+          return {
+            ...pos,
+            currentPrice,
+            marketValue,
+            unrealizedPnl,
+            unrealizedPnlPct,
+          };
+        })
+      );
+      
+      const cash = Number(portfolio.cash);
+      const totalValue = cash + totalMarketValue;
+      const initialCapital = Number(portfolio.initialCapital);
+      const totalReturn = initialCapital > 0 ? (totalValue - initialCapital) / initialCapital : 0;
+      
+      portfolio = {
+        ...portfolio,
+        totalValue,
+        marketValue: totalMarketValue,
+        totalReturn,
+        positions: positionsWithPrices,
+      };
+    }
+    
     return {
       success: true,
-      data: agent,
+      data: {
+        ...agent,
+        portfolio,
+      },
     };
   });
   
@@ -386,13 +444,62 @@ export async function portalRoutes(app: FastifyInstance) {
       };
     }
     
+    // 获取实时行情计算市值
+    const positionsWithPrices = await Promise.all(
+      portfolio.positions.map(async (pos: any) => {
+        let currentPrice = pos.currentPrice;
+        let marketValue = pos.marketValue;
+        let unrealizedPnl = pos.unrealizedPnl;
+        let unrealizedPnlPct = pos.unrealizedPnlPct;
+        
+        // 尝试从行情服务获取实时价格
+        try {
+          const quoteRes = await fetch(`http://localhost:8001/v1/market/quotes?codes=${pos.stockCode}`);
+          if (quoteRes.ok) {
+            const quoteJson = await quoteRes.json();
+            if (quoteJson.success && quoteJson.data && quoteJson.data.length > 0) {
+              const quoteData = quoteJson.data[0];
+              currentPrice = quoteData.price;
+              marketValue = currentPrice * pos.shares;
+              const cost = Number(pos.avgCost) * pos.shares;
+              unrealizedPnl = marketValue - cost;
+              unrealizedPnlPct = cost > 0 ? unrealizedPnl / cost : 0;
+            }
+          }
+        } catch (e) {
+          // 行情服务不可用，使用数据库值
+        }
+        
+        const totalValue = Number(portfolio.cash) + (marketValue || 0);
+        const weight = totalValue > 0 ? (marketValue || 0) / totalValue : 0;
+        
+        return {
+          ...pos,
+          currentPrice,
+          marketValue,
+          unrealizedPnl,
+          unrealizedPnlPct,
+          weight,
+        };
+      })
+    );
+    
+    // 计算总市值
+    const totalMarketValue = positionsWithPrices.reduce(
+      (sum, p) => sum + (Number(p.marketValue) || 0), 0
+    );
+    const totalValue = Number(portfolio.cash) + totalMarketValue;
+    const initialCapital = Number(portfolio.initialCapital);
+    const totalReturn = initialCapital > 0 ? (totalValue - initialCapital) / initialCapital : 0;
+    
     return {
       success: true,
       data: {
         cash: portfolio.cash,
-        totalValue: portfolio.totalValue,
-        marketValue: portfolio.marketValue,
-        positions: portfolio.positions,
+        totalValue,
+        marketValue: totalMarketValue,
+        totalReturn,
+        positions: positionsWithPrices,
       },
     };
   });
