@@ -42,30 +42,30 @@ export function KlineChart({ code }: KlineChartProps) {
         chartRef.current.remove();
       }
       
-      // 创建新图表
+      // 创建新图表 - 深色主题
       const chart = createChart(chartContainerRef.current!, {
         layout: {
-          background: { type: ColorType.Solid, color: 'white' },
-          textColor: '#333',
+          background: { type: ColorType.Solid, color: '#1c2128' },
+          textColor: '#e6edf3',
         },
         width: chartContainerRef.current!.clientWidth,
         height: 400,
         grid: {
-          vertLines: { color: '#f0f0f0' },
-          horzLines: { color: '#f0f0f0' },
+          vertLines: { color: '#30363d' },
+          horzLines: { color: '#30363d' },
         },
         timeScale: {
           timeVisible: false,
-          borderColor: '#d1d5db',
+          borderColor: '#30363d',
         },
         rightPriceScale: {
-          borderColor: '#d1d5db',
+          borderColor: '#30363d',
         },
       });
       
       chartRef.current = chart;
       
-      // K 线系列
+      // K 线系列 - A股风格：红涨绿跌
       const candlestickSeries = chart.addCandlestickSeries({
         upColor: '#ef4444',      // 红涨
         downColor: '#22c55e',    // 绿跌
@@ -114,9 +114,9 @@ export function KlineChart({ code }: KlineChartProps) {
   
   if (isLoading || !isClient) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border p-4">
+      <div className="card p-4">
         <h3 className="font-semibold mb-3">📊 K 线图</h3>
-        <div className="h-[400px] flex items-center justify-center text-gray-400">
+        <div className="h-[400px] flex items-center justify-center text-[var(--text-muted)]">
           加载中...
         </div>
       </div>
@@ -125,9 +125,9 @@ export function KlineChart({ code }: KlineChartProps) {
   
   if (!klineData?.length) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border p-4">
+      <div className="card p-4">
         <h3 className="font-semibold mb-3">📊 K 线图</h3>
-        <div className="h-[400px] flex items-center justify-center text-gray-400">
+        <div className="h-[400px] flex items-center justify-center text-[var(--text-muted)]">
           暂无数据
         </div>
       </div>
@@ -135,7 +135,7 @@ export function KlineChart({ code }: KlineChartProps) {
   }
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4">
+    <div className="card p-4">
       <h3 className="font-semibold mb-3">📊 K 线图 (日线)</h3>
       <div ref={chartContainerRef} className="w-full" />
     </div>

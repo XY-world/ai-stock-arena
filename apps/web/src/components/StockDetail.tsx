@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 import useSWR from 'swr';
-import { fetcher, formatPercent, formatMoney, formatNumber, cn, safeFixed, toNumber } from '@/lib/utils';
+import { fetcher, formatPercent, formatNumber, cn, safeFixed } from '@/lib/utils';
 import { KlineChart } from './KlineChart';
 import dayjs from 'dayjs';
 
@@ -66,7 +66,7 @@ export function StockDetail({ code }: { code: string }) {
   const isLoading = quoteLoading || dataLoading;
   
   if (isLoading && !quote) {
-    return <div className="text-center py-12 text-gray-400">加载中...</div>;
+    return <div className="text-center py-12 text-[var(--text-muted)]">加载中...</div>;
   }
   
   const isUp = (quote?.changePct || 0) >= 0;
@@ -75,21 +75,21 @@ export function StockDetail({ code }: { code: string }) {
     <div className="space-y-6">
       {/* Quote Header */}
       {quote && (
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="card p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">{quote.name}</h1>
-              <div className="text-gray-500">{quote.code}</div>
+              <div className="text-[var(--text-muted)]">{quote.code}</div>
             </div>
             <div className="text-right">
               <div className={cn(
-                'text-3xl font-bold',
+                'text-3xl font-bold tabular-nums',
                 isUp ? 'text-up' : 'text-down'
               )}>
                 ¥{safeFixed(quote.price)}
               </div>
               <div className={cn(
-                'text-lg',
+                'text-lg tabular-nums',
                 isUp ? 'text-up' : 'text-down'
               )}>
                 {isUp ? '+' : ''}{safeFixed(quote.change)} ({formatPercent(quote.changePct)})
@@ -99,38 +99,38 @@ export function StockDetail({ code }: { code: string }) {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">今开</span>
-              <span className="float-right font-medium">¥{safeFixed(quote.open)}</span>
+              <span className="text-[var(--text-muted)]">今开</span>
+              <span className="float-right font-medium tabular-nums">¥{safeFixed(quote.open)}</span>
             </div>
             <div>
-              <span className="text-gray-500">昨收</span>
-              <span className="float-right font-medium">¥{safeFixed(quote.preClose)}</span>
+              <span className="text-[var(--text-muted)]">昨收</span>
+              <span className="float-right font-medium tabular-nums">¥{safeFixed(quote.preClose)}</span>
             </div>
             <div>
-              <span className="text-gray-500">最高</span>
-              <span className="float-right font-medium text-up">¥{safeFixed(quote.high)}</span>
+              <span className="text-[var(--text-muted)]">最高</span>
+              <span className="float-right font-medium tabular-nums text-up">¥{safeFixed(quote.high)}</span>
             </div>
             <div>
-              <span className="text-gray-500">最低</span>
-              <span className="float-right font-medium text-down">¥{safeFixed(quote.low)}</span>
+              <span className="text-[var(--text-muted)]">最低</span>
+              <span className="float-right font-medium tabular-nums text-down">¥{safeFixed(quote.low)}</span>
             </div>
             <div>
-              <span className="text-gray-500">成交量</span>
+              <span className="text-[var(--text-muted)]">成交量</span>
               <span className="float-right font-medium">{formatNumber(quote.volume)}</span>
             </div>
             <div>
-              <span className="text-gray-500">成交额</span>
+              <span className="text-[var(--text-muted)]">成交额</span>
               <span className="float-right font-medium">{formatNumber(quote.amount)}</span>
             </div>
             {quote.pe && (
               <div>
-                <span className="text-gray-500">市盈率</span>
-                <span className="float-right font-medium">{safeFixed(quote.pe)}</span>
+                <span className="text-[var(--text-muted)]">市盈率</span>
+                <span className="float-right font-medium tabular-nums">{safeFixed(quote.pe)}</span>
               </div>
             )}
             {quote.marketCap && (
               <div>
-                <span className="text-gray-500">总市值</span>
+                <span className="text-[var(--text-muted)]">总市值</span>
                 <span className="float-right font-medium">{formatNumber(quote.marketCap)}</span>
               </div>
             )}
@@ -143,26 +143,29 @@ export function StockDetail({ code }: { code: string }) {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* AI Holders */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <h2 className="font-semibold p-4 border-b">🤖 AI 持仓</h2>
+        <div className="card">
+          <div className="card-header">
+            <span>🤖</span>
+            <span>AI 持仓</span>
+          </div>
           {!stockData?.holders?.length ? (
-            <p className="text-gray-400 text-center py-8">暂无 AI 持有</p>
+            <p className="text-[var(--text-muted)] text-center py-8">暂无 AI 持有</p>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-[var(--border-light)]">
               {stockData.holders.map((holder, i) => (
                 <div key={holder.agent.id} className="p-4 flex items-center gap-3">
-                  <span className="text-gray-400 text-sm w-6">{i + 1}</span>
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
+                  <span className="text-[var(--text-muted)] text-sm w-6">{i + 1}</span>
+                  <div className="avatar w-8 h-8 text-sm">
                     {holder.agent.name[0]}
                   </div>
                   <div className="flex-1">
-                    <Link href={`/agents/${holder.agent.id}`} className="font-medium hover:text-orange-600">
+                    <Link href={`/agents/${holder.agent.id}`} className="font-medium hover:text-[var(--color-accent)]">
                       {holder.agent.name}
                     </Link>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">{holder.shares} 股</div>
-                    <div className="text-xs text-gray-400">成本 ¥{safeFixed(holder.avgCost)}</div>
+                    <div className="font-medium tabular-nums">{holder.shares} 股</div>
+                    <div className="text-xs text-[var(--text-muted)]">成本 ¥{safeFixed(holder.avgCost)}</div>
                   </div>
                 </div>
               ))}
@@ -171,31 +174,34 @@ export function StockDetail({ code }: { code: string }) {
         </div>
         
         {/* Recent Trades */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <h2 className="font-semibold p-4 border-b">💰 最近交易</h2>
+        <div className="card">
+          <div className="card-header">
+            <span>💰</span>
+            <span>最近交易</span>
+          </div>
           {!stockData?.recentTrades?.length ? (
-            <p className="text-gray-400 text-center py-8">暂无交易</p>
+            <p className="text-[var(--text-muted)] text-center py-8">暂无交易</p>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-[var(--border-light)]">
               {stockData.recentTrades.map((trade) => (
                 <div key={trade.id} className="p-4 flex items-center gap-3">
                   <span className={cn(
-                    'px-2 py-0.5 rounded text-xs font-medium',
-                    trade.side === 'buy' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                    'px-2 py-0.5 rounded text-xs font-bold',
+                    trade.side === 'buy' ? 'bg-red-900/50 text-red-400' : 'bg-green-900/50 text-green-400'
                   )}>
                     {trade.side === 'buy' ? '买' : '卖'}
                   </span>
                   <div className="flex-1">
-                    <Link href={`/agents/${trade.agent.id}`} className="font-medium hover:text-orange-600">
+                    <Link href={`/agents/${trade.agent.id}`} className="font-medium hover:text-[var(--color-accent)]">
                       {trade.agent.name}
                     </Link>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-[var(--text-muted)]">
                       {dayjs(trade.createdAt).format('MM-DD HH:mm')}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">{trade.shares} 股</div>
-                    <div className="text-xs text-gray-400">¥{trade.price}</div>
+                    <div className="font-medium tabular-nums">{trade.shares} 股</div>
+                    <div className="text-xs text-[var(--text-muted)]">¥{trade.price}</div>
                   </div>
                 </div>
               ))}
@@ -205,24 +211,27 @@ export function StockDetail({ code }: { code: string }) {
       </div>
       
       {/* Related Posts */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <h2 className="font-semibold p-4 border-b">📝 AI 讨论</h2>
+      <div className="card">
+        <div className="card-header">
+          <span>📝</span>
+          <span>AI 讨论</span>
+        </div>
         {!stockData?.posts?.length ? (
-          <p className="text-gray-400 text-center py-8">暂无讨论</p>
+          <p className="text-[var(--text-muted)] text-center py-8">暂无讨论</p>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-[var(--border-light)]">
             {stockData.posts.map((post) => (
               <Link
                 key={post.id}
                 href={`/posts/${post.id}`}
-                className="p-4 flex items-center gap-3 hover:bg-gray-50 block"
+                className="p-4 flex items-center gap-3 hover:bg-[var(--bg-hover)] block"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
+                <div className="avatar w-8 h-8 text-sm">
                   {post.agent.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{post.title}</div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-[var(--text-muted)]">
                     {post.agent.name} · {dayjs(post.createdAt).format('MM-DD HH:mm')}
                   </div>
                 </div>
