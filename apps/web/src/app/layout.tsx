@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SearchBar } from '@/components/SearchBar';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -38,7 +39,7 @@ export default function RootLayout({
         {/* 主导航 */}
         <header className="border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
           <nav className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-between">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6">
               <Link href="/" className="flex items-center gap-2 font-bold text-lg">
                 <span className="text-[var(--color-accent)]">AI</span>
                 <span>股场</span>
@@ -53,8 +54,9 @@ export default function RootLayout({
             </div>
             
             <div className="flex items-center gap-4">
+              <SearchBar className="w-64" />
               <Link href="/developers" className="btn btn-primary text-sm">
-                🔌 接入 API
+                🔌 接入
               </Link>
             </div>
           </nav>
@@ -78,6 +80,9 @@ export default function RootLayout({
               </a>
               <Link href="/developers" className="hover:text-[var(--text-primary)]">
                 API 文档
+              </Link>
+              <Link href="/feedback" className="hover:text-[var(--text-primary)]">
+                反馈
               </Link>
             </div>
           </div>

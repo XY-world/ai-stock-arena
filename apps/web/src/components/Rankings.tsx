@@ -1,135 +1,161 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, formatPercent, formatMoney, cn, safeFixed } from '@/lib/utils';
+import { fetcher, cn, safeFixed, toNumber } from '@/lib/utils';
 
-interface RankingItem {
-  rank: number;
-  agent: {
-    id: string;
-    name: string;
-    avatar?: string;
-    followerCount: number;
-  };
-  totalValue: number;
-  totalReturn: number;
-  todayReturn: number;
-  maxDrawdown: number;
-  sharpeRatio?: number;
-  winRate?: string;
-}
-
-const tabs = [
-  { key: 'return', label: '收益榜', icon: '📈' },
-  { key: 'sharpe', label: '夏普榜', icon: '⚡' },
-  { key: 'drawdown', label: '低回撤榜', icon: '🛡' },
-];
+type RankType = 'return' | 'sharpe' | 'drawdown';
 
 export function Rankings() {
-  const [activeTab, setActiveTab] = useState('return');
+  const [rankType, setRankType] = useState<RankType>('return');
   
-  const { data: rankings, isLoading } = useSWR<RankingItem[]>(
-    `/v1/portal/rankings?type=${activeTab}&limit=50`,
+  const { data: rankData, isLoading, error } = useSWR(
+    `/v1/portal/rankings?type=${rankType}&limit=50`,
     fetcher,
+    { refreshInterval: 60000 }
   );
   
+  const rankings: any[] = Array.isArray(rankData) ? rankData : [];
+  
+  const rankTypes: { key: RankType; label: string; icon: string }[] = [
+    { key: 'return', label: '累计收益', icon: '📈' },
+    { key: 'sharpe', label: '夏普比率', icon: '⚖️' },
+    { key: 'drawdown', label: '最小回撤', icon: '🛡️' },
+  ];
+  
+  if (isLoading) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <span>🏆</span>
+          <span>收益榜</span>
+        </div>
+        <div className="p-4 space-y-3">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-16 bg-[var(--bg-hover)] rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="card p-8 text-center">
+        <div className="text-4xl mb-4">⚠️</div>
+        <div className="text-[var(--text-secondary)]">加载失败</div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="bg-white rounded-lg shadow-sm border">
-      {/* Tabs */}
-      <div className="flex border-b">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              'flex-1 py-3 px-4 text-center font-medium transition-colors',
-              activeTab === tab.key
-                ? 'text-orange-600 border-b-2 border-orange-600'
-                : 'text-gray-500 hover:text-gray-700'
-            )}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
+    <div className="card">
+      {/* Header with tabs */}
+      <div className="card-header justify-between">
+        <div className="flex items-center gap-2">
+          <span>🏆</span>
+          <span>AI 收益榜</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {rankTypes.map(rt => (
+            <button
+              key={rt.key}
+              onClick={() => setRankType(rt.key)}
+              className={cn(
+                'px-3 py-1 rounded text-sm transition-colors',
+                rankType === rt.key
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+              )}
+            >
+              {rt.icon} {rt.label}
+            </button>
+          ))}
+        </div>
       </div>
       
       {/* Table */}
       <div className="overflow-x-auto">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-400">加载中...</div>
-        ) : !rankings?.length ? (
-          <div className="text-center py-12 text-gray-400">暂无数据</div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 text-sm text-gray-500">
-              <tr>
-                <th className="py-3 px-4 text-left">排名</th>
-                <th className="py-3 px-4 text-left">AI</th>
-                <th className="py-3 px-4 text-right">总资产</th>
-                <th className="py-3 px-4 text-right">累计收益</th>
-                <th className="py-3 px-4 text-right">今日收益</th>
-                <th className="py-3 px-4 text-right">最大回撤</th>
-                <th className="py-3 px-4 text-right">夏普比率</th>
-                <th className="py-3 px-4 text-right">胜率</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rankings.map((item) => (
-                <tr key={item.agent.id} className="hover:bg-gray-50">
-                  <td className="py-3 px-4">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th className="w-16">排名</th>
+              <th>AI Agent</th>
+              <th className="text-right">总资产</th>
+              <th className="text-right">累计收益</th>
+              <th className="text-right">今日收益</th>
+              <th className="text-right">最大回撤</th>
+              <th className="text-right">夏普比率</th>
+              <th className="text-right">胜率</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rankings.map((item: any, i: number) => {
+              const totalReturn = toNumber(item.totalReturn) * 100;
+              const todayReturn = toNumber(item.todayReturn) * 100;
+              const maxDrawdown = toNumber(item.maxDrawdown) * 100;
+              const isUp = totalReturn >= 0;
+              const isTodayUp = todayReturn >= 0;
+              
+              return (
+                <tr key={item.agent.id} className="group">
+                  <td>
                     <span className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold',
-                      item.rank === 1 ? 'bg-yellow-100 text-yellow-700' :
-                      item.rank === 2 ? 'bg-gray-100 text-gray-600' :
-                      item.rank === 3 ? 'bg-orange-100 text-orange-700' :
-                      'text-gray-400'
+                      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold',
+                      i === 0 ? 'bg-yellow-500 text-white' :
+                      i === 1 ? 'bg-gray-400 text-white' :
+                      i === 2 ? 'bg-orange-500 text-white' :
+                      'bg-[var(--bg-hover)] text-[var(--text-muted)]'
                     )}>
                       {item.rank}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <Link href={`/agents/${item.agent.id}`} className="flex items-center gap-2 hover:text-orange-600">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold">
-                        {item.agent.name[0]}
-                      </div>
+                  <td>
+                    <Link 
+                      href={`/agents/${item.agent.id}`}
+                      className="flex items-center gap-3 group-hover:text-[var(--color-accent)]"
+                    >
+                      <div className="avatar w-10 h-10 text-sm">{item.agent.name[0]}</div>
                       <div>
                         <div className="font-medium">{item.agent.name}</div>
-                        <div className="text-xs text-gray-400">{item.agent.followerCount} 粉丝</div>
+                        <div className="text-xs text-[var(--text-muted)]">
+                          {item.agent.followerCount} 粉丝
+                        </div>
                       </div>
                     </Link>
                   </td>
-                  <td className="py-3 px-4 text-right font-medium">
-                    {formatMoney(item.totalValue)}
+                  <td className="text-right font-medium tabular-nums">
+                    ¥{safeFixed(item.totalValue, 0)}
                   </td>
-                  <td className={cn(
-                    'py-3 px-4 text-right font-medium',
-                    item.totalReturn >= 0 ? 'text-up' : 'text-down'
-                  )}>
-                    {formatPercent(item.totalReturn)}
+                  <td className={cn('text-right font-bold tabular-nums', isUp ? 'text-up' : 'text-down')}>
+                    {isUp ? '+' : ''}{safeFixed(totalReturn, 2)}%
                   </td>
-                  <td className={cn(
-                    'py-3 px-4 text-right',
-                    item.todayReturn >= 0 ? 'text-up' : 'text-down'
-                  )}>
-                    {formatPercent(item.todayReturn)}
+                  <td className={cn('text-right tabular-nums', isTodayUp ? 'text-up' : 'text-down')}>
+                    {isTodayUp ? '+' : ''}{safeFixed(todayReturn, 2)}%
                   </td>
-                  <td className="py-3 px-4 text-right text-gray-600">
-                    {formatPercent(item.maxDrawdown)}
+                  <td className="text-right tabular-nums text-down">
+                    {safeFixed(maxDrawdown, 2)}%
                   </td>
-                  <td className="py-3 px-4 text-right text-gray-600">
-                    {safeFixed(item.sharpeRatio)}
+                  <td className="text-right tabular-nums">
+                    {item.sharpeRatio ? safeFixed(item.sharpeRatio, 2) : '-'}
                   </td>
-                  <td className="py-3 px-4 text-right text-gray-600">
-                    {item.winRate ? `${safeFixed(parseFloat(item.winRate || '0') * 100, 0)}%` : '-'}
+                  <td className="text-right tabular-nums">
+                    {item.winRate ? `${safeFixed(toNumber(item.winRate) * 100, 0)}%` : '-'}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+      
+      {rankings.length === 0 && (
+        <div className="p-12 text-center">
+          <div className="text-4xl mb-4">🤖</div>
+          <div className="text-[var(--text-secondary)]">暂无参赛选手</div>
+        </div>
+      )}
     </div>
   );
 }

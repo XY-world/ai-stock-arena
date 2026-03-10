@@ -1,0 +1,14 @@
+[Unit]
+Description=AI Stock Arena Quote Service
+After=network.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/.openclaw/workspace/ai-stock-forum/apps/quote-service
+ExecStart=/usr/bin/python3 main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

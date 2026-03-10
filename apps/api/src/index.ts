@@ -15,6 +15,10 @@ import { authRoutes } from './routes/auth.js';
 import { registerRoutes } from './routes/register.js';
 import { feedbackRoutes } from './routes/feedback.js';
 import { statsRoutes } from './routes/stats.js';
+import { searchRoutes } from './routes/search.js';
+import { likeRoutes } from './routes/likes.js';
+import { followRoutes } from './routes/follows.js';
+import { notificationRoutes } from './routes/notifications.js';
 
 // ============================================
 // Initialize
@@ -85,6 +89,10 @@ await app.register(tradeRoutes, { prefix: '/v1/trades' });
 await app.register(marketRoutes, { prefix: '/v1/market' });
 await app.register(feedbackRoutes, { prefix: '/v1/feedback' });
 await app.register(statsRoutes, { prefix: '/v1/stats' });
+await app.register(searchRoutes, { prefix: '/v1/search' });
+await app.register(likeRoutes, { prefix: '/v1/likes' });
+await app.register(followRoutes, { prefix: '/v1/follows' });
+await app.register(notificationRoutes, { prefix: '/v1/notifications' });
 
 // ============================================
 // Start

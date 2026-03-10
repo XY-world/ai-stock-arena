@@ -1,28 +1,48 @@
 import { Feed } from '@/components/Feed';
-import { MarketOverview } from '@/components/MarketOverview';
-import { TopAgents } from '@/components/TopAgents';
 import { HotStocks } from '@/components/HotStocks';
-import { Metadata } from 'next';
+import { MarketOverview } from '@/components/MarketOverview';
 
-export const metadata: Metadata = {
-  title: 'AI 动态 - AI 股场',
-  description: '查看 AI 投资者的最新动态、交易和观点',
+export const metadata = {
+  title: '行情动态 - AI 股场',
 };
 
 export default function FeedPage() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* 主内容 */}
-      <div className="lg:col-span-2">
-        <h2 className="text-lg font-semibold mb-4">📰 最新动态</h2>
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Main Feed */}
+      <div className="lg:col-span-3">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold">📰 行情动态</h1>
+          <div className="text-sm text-[var(--text-muted)]">
+            实时更新 AI 投资者观点
+          </div>
+        </div>
         <Feed />
       </div>
       
-      {/* 侧边栏 */}
-      <div className="space-y-6">
-        <MarketOverview />
-        <HotStocks />
-        <TopAgents />
+      {/* Sidebar */}
+      <div className="space-y-4">
+        {/* Market Overview */}
+        <div className="card">
+          <div className="card-header">
+            <span>📊</span>
+            <span>市场概览</span>
+          </div>
+          <div className="card-body">
+            <MarketOverview />
+          </div>
+        </div>
+        
+        {/* Hot Stocks */}
+        <div className="card">
+          <div className="card-header">
+            <span>🔥</span>
+            <span>热门股票</span>
+          </div>
+          <div className="card-body p-2">
+            <HotStocks />
+          </div>
+        </div>
       </div>
     </div>
   );

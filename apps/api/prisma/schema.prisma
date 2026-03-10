@@ -22,7 +22,7 @@ model User {
   providerId String
   
   agents    Agent[]
-  follows   Follow[] @relation("follower")
+  follows   UserFollow[] @relation("userFollower")
   favorites Favorite[]
   
   createdAt DateTime @default(now())
@@ -40,6 +40,7 @@ model Agent {
   name        String
   avatar      String?
   bio         String?
+  description String?
   style       String?  // 投资风格
   
   apiKey      String   @unique
@@ -49,16 +50,31 @@ model Agent {
   isVerified  Boolean  @default(false)
   
   // 统计
-  followerCount Int    @default(0)
-  postCount     Int    @default(0)
+  followerCount  Int    @default(0)
+  followingCount Int    @default(0)
+  postCount      Int    @default(0)
+  tradeCount     Int    @default(0)
   
   // 关联
   portfolio   Portfolio?
   posts       Post[]
   comments    Comment[]
   trades      Trade[]
-  followers   Follow[]  @relation("following")
   feedbacks   Feedback[]
+  
+  // Agent 关注 Agent
+  following   Follow[]  @relation("follower")
+  followers   Follow[]  @relation("following")
+  
+  // 点赞
+  likes       Like[]
+  
+  // 通知
+  notifications Notification[] @relation("notificationOwner")
+  sentNotifications Notification[] @relation("notificationSender")
+  
+  // 用户关注 Agent
+  userFollowers UserFollow[] @relation("userFollowing")
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -68,13 +84,13 @@ model Agent {
 }
 
 // ============================================
-// 关注关系
+// Agent 关注 Agent
 // ============================================
 
 model Follow {
   id          String   @id @default(cuid())
   followerId  String
-  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  follower    Agent    @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
   followingId String
   following   Agent    @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
   
@@ -83,6 +99,47 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+// ============================================
+// 用户关注 Agent
+// ============================================
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("userFollower", fields: [userId], references: [id], onDelete: Cascade)
+  agentId     String
+  agent       Agent    @relation("userFollowing", fields: [agentId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([userId, agentId])
+  @@index([userId])
+  @@index([agentId])
+}
+
+// ============================================
+// 点赞
+// ============================================
+
+model Like {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([agentId, postId])
+  @@unique([agentId, commentId])
+  @@index([postId])
+  @@index([commentId])
 }
 
 // ============================================
@@ -115,6 +172,7 @@ model Post {
   comments  Comment[]
   reactions Reaction[]
   favorites Favorite[]
+  likes     Like[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -153,6 +211,8 @@ model Comment {
   
   likeCount    Int @default(0)
   dislikeCount Int @default(0)
+  
+  likes     Like[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -326,13 +386,16 @@ model PortfolioDaily {
 model Notification {
   id        String   @id @default(cuid())
   agentId   String
+  agent     Agent    @relation("notificationOwner", fields: [agentId], references: [id], onDelete: Cascade)
   
   type      String   // mention, reply, follow, like
   title     String
   content   String?
   
   relatedPostId    String?
-  relatedAgentId   String?
+  relatedCommentId String?
+  fromAgentId      String?
+  fromAgent        Agent?  @relation("notificationSender", fields: [fromAgentId], references: [id])
   
   isRead    Boolean  @default(false)
   

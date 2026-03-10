@@ -362,4 +362,166 @@ export async function portalRoutes(app: FastifyInstance) {
       meta: { hasMore, nextCursor },
     };
   });
+  
+  // ============================================
+  // Agent 持仓详情
+  // ============================================
+  
+  app.get('/agents/:id/positions', async (request: FastifyRequest) => {
+    const { id } = request.params as { id: string };
+    
+    const portfolio = await prisma.portfolio.findFirst({
+      where: { agentId: id },
+      include: {
+        positions: {
+          orderBy: { marketValue: 'desc' },
+        },
+      },
+    });
+    
+    if (!portfolio) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Portfolio not found' },
+      };
+    }
+    
+    return {
+      success: true,
+      data: {
+        cash: portfolio.cash,
+        totalValue: portfolio.totalValue,
+        marketValue: portfolio.marketValue,
+        positions: portfolio.positions,
+      },
+    };
+  });
+  
+  // ============================================
+  // Agent 交易历史
+  // ============================================
+  
+  app.get('/agents/:id/trades', async (request: FastifyRequest) => {
+    const { id } = request.params as { id: string };
+    const query = request.query as {
+      page?: string;
+      limit?: string;
+      stockCode?: string;
+      side?: string;
+    };
+    
+    const page = parseInt(query.page || '1');
+    const limit = Math.min(parseInt(query.limit || '20'), 50);
+    const skip = (page - 1) * limit;
+    
+    const where: any = { agentId: id };
+    if (query.stockCode) {
+      where.stockCode = query.stockCode;
+    }
+    if (query.side) {
+      where.side = query.side;
+    }
+    
+    const [trades, total] = await Promise.all([
+      prisma.trade.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          stockCode: true,
+          stockName: true,
+          side: true,
+          shares: true,
+          price: true,
+          amount: true,
+          totalFee: true,
+          netAmount: true,
+          realizedPnl: true,
+          realizedPnlPct: true,
+          reason: true,
+          tradeDate: true,
+          createdAt: true,
+        },
+      }),
+      prisma.trade.count({ where }),
+    ]);
+    
+    return {
+      success: true,
+      data: trades,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  });
+  
+  // ============================================
+  // Agent 收益曲线数据
+  // ============================================
+  
+  app.get('/agents/:id/performance', async (request: FastifyRequest) => {
+    const { id } = request.params as { id: string };
+    const query = request.query as { days?: string };
+    
+    const days = Math.min(parseInt(query.days || '30'), 365);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    const portfolio = await prisma.portfolio.findFirst({
+      where: { agentId: id },
+      select: {
+        totalValue: true,
+        totalReturn: true,
+        todayReturn: true,
+        maxDrawdown: true,
+        sharpeRatio: true,
+        winCount: true,
+        loseCount: true,
+        tradeCount: true,
+        dailyData: {
+          where: { date: { gte: startDate } },
+          orderBy: { date: 'asc' },
+          select: {
+            date: true,
+            totalValue: true,
+            netValue: true,
+            dailyReturn: true,
+            totalReturn: true,
+          },
+        },
+      },
+    });
+    
+    if (!portfolio) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Portfolio not found' },
+      };
+    }
+    
+    const winRate = portfolio.tradeCount > 0
+      ? (portfolio.winCount / portfolio.tradeCount * 100).toFixed(1)
+      : null;
+    
+    return {
+      success: true,
+      data: {
+        summary: {
+          totalValue: portfolio.totalValue,
+          totalReturn: portfolio.totalReturn,
+          todayReturn: portfolio.todayReturn,
+          maxDrawdown: portfolio.maxDrawdown,
+          sharpeRatio: portfolio.sharpeRatio,
+          winRate,
+          tradeCount: portfolio.tradeCount,
+        },
+        dailyData: portfolio.dailyData,
+      },
+    };
+  });
 }

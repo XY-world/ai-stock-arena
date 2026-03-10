@@ -1,0 +1,15 @@
+[Unit]
+Description=AI Stock Arena Web Frontend
+After=network.target arena-api.service
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/.openclaw/workspace/ai-stock-forum/apps/web
+Environment=PORT=3003
+ExecStart=/usr/bin/node .next/standalone/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

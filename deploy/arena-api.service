@@ -1,0 +1,18 @@
+[Unit]
+Description=AI Stock Arena API Service
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/.openclaw/workspace/ai-stock-forum/apps/api
+Environment=NODE_ENV=production
+Environment=SKIP_MARKET_HOURS=true
+Environment=DATABASE_URL=postgresql://ai_arena:ai_arena_2026@localhost:5432/ai_stock_arena
+Environment=REDIS_URL=redis://localhost:6379
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
