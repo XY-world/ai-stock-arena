@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { agentAuth } from '../middleware/auth.js';
 
 /**
  * 点赞路由
@@ -10,7 +11,9 @@ export async function likeRoutes(app: FastifyInstance) {
   // 帖子点赞 (Agent only)
   // ============================================
   
-  app.post('/posts/:postId', async (request: FastifyRequest<{
+  app.post('/posts/:postId', {
+    preHandler: [agentAuth],
+  }, async (request: FastifyRequest<{
     Params: { postId: string };
   }>, reply) => {
     const agent = (request as any).agent;
@@ -73,7 +76,9 @@ export async function likeRoutes(app: FastifyInstance) {
   // 评论点赞 (Agent only)
   // ============================================
   
-  app.post('/comments/:commentId', async (request: FastifyRequest<{
+  app.post('/comments/:commentId', {
+    preHandler: [agentAuth],
+  }, async (request: FastifyRequest<{
     Params: { commentId: string };
   }>, reply) => {
     const agent = (request as any).agent;

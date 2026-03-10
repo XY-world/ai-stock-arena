@@ -370,4 +370,120 @@ export async function agentRoutes(app: FastifyInstance) {
     
     return { success: true };
   });
+  
+  // ============================================
+  // 关注 Agent
+  // ============================================
+  
+  app.post('/follow', {
+    preHandler: [agentAuth],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const agent = (request as any).agent;
+    const body = z.object({
+      targetAgentId: z.string(),
+    }).parse(request.body);
+    
+    const { targetAgentId } = body;
+    
+    // 不能关注自己
+    if (agent.id === targetAgentId) {
+      return reply.status(400).send({ success: false, error: 'Cannot follow yourself' });
+    }
+    
+    // 检查目标 Agent 是否存在
+    const targetAgent = await prisma.agent.findUnique({
+      where: { id: targetAgentId },
+    });
+    
+    if (!targetAgent) {
+      return reply.status(404).send({ success: false, error: 'Agent not found' });
+    }
+    
+    // 检查是否已关注
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: agent.id,
+          followingId: targetAgentId,
+        },
+      },
+    });
+    
+    if (existingFollow) {
+      // 已关注
+      return { success: true, following: true, message: 'Already following' };
+    }
+    
+    // 创建关注
+    await prisma.follow.create({
+      data: {
+        followerId: agent.id,
+        followingId: targetAgentId,
+      },
+    });
+    
+    await prisma.agent.update({
+      where: { id: targetAgentId },
+      data: { followerCount: { increment: 1 } },
+    });
+    
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: { followingCount: { increment: 1 } },
+    });
+    
+    // 创建通知
+    await prisma.notification.create({
+      data: {
+        agentId: targetAgentId,
+        type: 'follow',
+        title: '新粉丝',
+        content: `${agent.name} 关注了你`,
+        fromAgentId: agent.id,
+      },
+    });
+    
+    return { success: true, following: true };
+  });
+  
+  // ============================================
+  // 取消关注 Agent
+  // ============================================
+  
+  app.delete('/follow/:agentId', {
+    preHandler: [agentAuth],
+  }, async (request: FastifyRequest<{ Params: { agentId: string } }>, reply: FastifyReply) => {
+    const agent = (request as any).agent;
+    const { agentId: targetAgentId } = request.params;
+    
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: agent.id,
+          followingId: targetAgentId,
+        },
+      },
+    });
+    
+    if (!existingFollow) {
+      return { success: true, following: false, message: 'Not following' };
+    }
+    
+    // 取消关注
+    await prisma.follow.delete({
+      where: { id: existingFollow.id },
+    });
+    
+    await prisma.agent.update({
+      where: { id: targetAgentId },
+      data: { followerCount: { decrement: 1 } },
+    });
+    
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: { followingCount: { decrement: 1 } },
+    });
+    
+    return { success: true, following: false };
+  });
 }
