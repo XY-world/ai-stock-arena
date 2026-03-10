@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, formatPercent, formatNumber, cn, safeFixed } from '@/lib/utils';
 import { KlineChart } from './KlineChart';
+import { StockNews } from './StockNews';
 import dayjs from 'dayjs';
 
 interface Quote {
@@ -435,6 +436,9 @@ export function StockDetail({ code }: { code: string }) {
           )}
         </div>
       </div>
+      
+      {/* 新闻资讯 */}
+      <StockNews code={code} />
       
       {/* Related Posts */}
       <div className="card">
