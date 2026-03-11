@@ -171,24 +171,9 @@ export async function portalRoutes(app: FastifyInstance) {
     const type = query.type || 'return';
     const limit = Math.min(parseInt(query.limit || '20'), 100);
     
-    let orderBy: any;
-    switch (type) {
-      case 'return':
-        orderBy = { totalReturn: 'desc' };
-        break;
-      case 'sharpe':
-        orderBy = { sharpeRatio: 'desc' };
-        break;
-      case 'drawdown':
-        orderBy = { maxDrawdown: 'asc' };
-        break;
-      default:
-        orderBy = { totalReturn: 'desc' };
-    }
-    
+    // 获取所有组合及其持仓
     const portfolios = await prisma.portfolio.findMany({
-      orderBy,
-      take: limit,
+      take: limit * 2, // 获取更多以便排序后截取
       include: {
         agent: {
           select: {
@@ -198,21 +183,68 @@ export async function portalRoutes(app: FastifyInstance) {
             followerCount: true,
           },
         },
+        positions: {
+          select: {
+            stockCode: true,
+            shares: true,
+            avgCost: true,
+          },
+        },
       },
     });
     
-    // 实时计算 totalValue 和 totalReturn (不依赖缓存字段)
-    const rankings = portfolios.map((p: any, i: number) => {
+    // 收集所有股票代码
+    const allStockCodes = new Set<string>();
+    portfolios.forEach((p: any) => {
+      p.positions.forEach((pos: any) => {
+        allStockCodes.add(pos.stockCode);
+      });
+    });
+    
+    // 批量获取实时行情
+    const priceMap = new Map<string, number>();
+    if (allStockCodes.size > 0) {
+      try {
+        const codes = Array.from(allStockCodes).join(',');
+        const quoteRes = await fetch(`${QUOTE_SERVICE_URL}/v1/market/quotes?codes=${codes}`);
+        if (quoteRes.ok) {
+          const quoteJson = await quoteRes.json() as { success: boolean; data: Array<{ code: string; price: number }> };
+          if (quoteJson.success && quoteJson.data) {
+            quoteJson.data.forEach((q: { code: string; price: number }) => {
+              priceMap.set(q.code, q.price);
+            });
+          }
+        }
+      } catch (e) {
+        // 行情服务不可用，使用数据库缓存值
+        console.error('行情服务不可用:', e);
+      }
+    }
+    
+    // 实时计算每个组合的 totalValue 和 totalReturn
+    const rankings = portfolios.map((p: any) => {
       const cash = Number(p.cash) || 0;
-      const marketValue = Number(p.marketValue) || 0;
       const initialCapital = Number(p.initialCapital) || 1000000;
-      const realTotalValue = cash + marketValue;
+      
+      // 计算实时市值
+      let realMarketValue = 0;
+      for (const pos of p.positions) {
+        const price = priceMap.get(pos.stockCode);
+        if (price) {
+          realMarketValue += price * pos.shares;
+        } else {
+          // 没有实时行情，用成本价估算
+          realMarketValue += Number(pos.avgCost) * pos.shares;
+        }
+      }
+      
+      const realTotalValue = cash + realMarketValue;
       const realTotalReturn = initialCapital > 0 
         ? (realTotalValue - initialCapital) / initialCapital 
         : 0;
       
       return {
-        rank: i + 1,
+        rank: 0,
         agent: p.agent,
         totalValue: realTotalValue,
         totalReturn: realTotalReturn,
@@ -225,15 +257,28 @@ export async function portalRoutes(app: FastifyInstance) {
       };
     });
     
-    // 按实时 totalReturn 重新排序
-    if (type === 'return') {
-      rankings.sort((a: any, b: any) => b.totalReturn - a.totalReturn);
-      rankings.forEach((r: any, i: number) => r.rank = i + 1);
+    // 按 type 排序
+    switch (type) {
+      case 'return':
+        rankings.sort((a: any, b: any) => b.totalReturn - a.totalReturn);
+        break;
+      case 'sharpe':
+        rankings.sort((a: any, b: any) => (b.sharpeRatio || 0) - (a.sharpeRatio || 0));
+        break;
+      case 'drawdown':
+        rankings.sort((a: any, b: any) => (a.maxDrawdown || 0) - (b.maxDrawdown || 0));
+        break;
+      default:
+        rankings.sort((a: any, b: any) => b.totalReturn - a.totalReturn);
     }
+    
+    // 截取并设置排名
+    const result = rankings.slice(0, limit);
+    result.forEach((r: any, i: number) => r.rank = i + 1);
     
     return {
       success: true,
-      data: rankings,
+      data: result,
     };
   });
   

@@ -1,0 +1,332 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 深色主题 - 参考同花顺/东方财富 */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: #1c2128;
+  --bg-hover: #252c35;
+  
+  --border-color: #30363d;
+  --border-light: #21262d;
+  
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  
+  /* 涨跌色 - A股标准 */
+  --color-up: #ef4444;
+  --color-down: #22c55e;
+  --color-flat: #8b949e;
+  
+  /* 强调色 */
+  --color-accent: #f97316;
+  --color-accent-hover: #ea580c;
+  --color-warning: #eab308;
+  --color-info: #3b82f6;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--bg-secondary);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* 基础组件 */
+.card {
+  @apply rounded-lg border;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+.card-header {
+  @apply px-4 py-3 border-b font-semibold flex items-center gap-2;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.card-body {
+  @apply p-4;
+}
+
+/* 表格 */
+.data-table {
+  @apply w-full text-sm;
+}
+
+.data-table th {
+  @apply py-2 px-3 text-left font-medium;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table td {
+  @apply py-2 px-3;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.data-table tr:hover td {
+  background-color: var(--bg-hover);
+}
+
+/* 涨跌色 */
+.text-up {
+  color: var(--color-up) !important;
+}
+
+.text-down {
+  color: var(--color-down) !important;
+}
+
+.text-flat {
+  color: var(--color-flat) !important;
+}
+
+.bg-up {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+.bg-down {
+  background-color: rgba(34, 197, 94, 0.15);
+}
+
+/* 按钮 */
+.btn {
+  @apply px-4 py-2 rounded font-medium transition-colors;
+}
+
+.btn-primary {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.btn-outline {
+  @apply border;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-buy {
+  @apply bg-red-600 hover:bg-red-700 text-white;
+}
+
+.btn-sell {
+  @apply bg-green-600 hover:bg-green-700 text-white;
+}
+
+/* 标签 */
+.tag {
+  @apply px-2 py-0.5 rounded text-xs font-medium;
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.tag-up {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-up);
+}
+
+.tag-down {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: var(--color-down);
+}
+
+/* 输入框 */
+input, textarea, select {
+  @apply rounded px-3 py-2 w-full;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* 头像 */
+.avatar {
+  @apply rounded-full flex items-center justify-center font-bold text-white;
+  background: linear-gradient(135deg, var(--color-accent), #ec4899);
+}
+
+/* 数据展示 */
+.stat-value {
+  @apply text-2xl font-bold tabular-nums;
+}
+
+.stat-label {
+  @apply text-xs;
+  color: var(--text-muted);
+}
+
+/* 链接 */
+a {
+  color: var(--text-primary);
+}
+
+a:hover {
+  color: var(--color-accent);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 行情闪烁动画 */
+@keyframes flash-up {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(239, 68, 68, 0.3); }
+}
+
+@keyframes flash-down {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(34, 197, 94, 0.3); }
+}
+
+.flash-up {
+  animation: flash-up 0.5s ease-out;
+}
+
+.flash-down {
+  animation: flash-down 0.5s ease-out;
+}
+
+/* 导航 */
+.nav-link {
+  @apply px-3 py-2 rounded transition-colors;
+  color: var(--text-secondary);
+}
+
+.nav-link:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-link.active {
+  color: var(--color-accent);
+}
+
+/* 指数条 */
+.index-bar {
+  @apply flex items-center gap-6 text-sm;
+  background-color: var(--bg-secondary);
+}
+
+.index-item {
+  @apply flex items-center gap-2;
+}
+
+.index-name {
+  color: var(--text-secondary);
+}
+
+.index-value {
+  @apply font-medium tabular-nums;
+}
+
+/* 侧边栏 */
+.sidebar {
+  background-color: var(--bg-card);
+  border-left: 1px solid var(--border-color);
+}
+
+/* 帖子 */
+.post-card {
+  @apply card p-4;
+}
+
+.post-card:hover {
+  border-color: var(--color-accent);
+}
+
+/* K线相关 */
+.kline-container {
+  background-color: var(--bg-card);
+}
+
+/* 交易面板 */
+.trade-panel {
+  @apply card;
+}
+
+.trade-input {
+  @apply flex items-center gap-2 p-2 rounded;
+  background-color: var(--bg-secondary);
+}
+
+/* 持仓表格 */
+.position-row {
+  @apply border-b;
+  border-color: var(--border-light);
+}
+
+.position-row:hover {
+  background-color: var(--bg-hover);
+}
+
+/* 工具提示 */
+.tooltip {
+  @apply absolute z-50 px-2 py-1 rounded text-xs;
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-color);
+}
+
+/* 加载状态 */
+.loading {
+  @apply animate-pulse;
+  background-color: var(--bg-hover);
+}
+
+/* 徽章 */
+.badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-green-900/50 text-green-400;
+}
+
+.badge-warning {
+  @apply bg-yellow-900/50 text-yellow-400;
+}
+
+.badge-danger {
+  @apply bg-red-900/50 text-red-400;
+}
+
+.badge-info {
+  @apply bg-blue-900/50 text-blue-400;
+}

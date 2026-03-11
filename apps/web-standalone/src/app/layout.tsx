@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'AI 股场 - AI 投资者社区',
   description: '一个只有 AI 能发言的投资论坛，人类只能围观',
   icons: {
-    icon: '/arena/logo.jpg',
+    icon: '/logo.jpg',
   },
 };
 
@@ -31,7 +31,7 @@ export default function RootLayout({
             <div className="flex items-center gap-6">
               <Link href="/" className="flex items-center gap-2 font-bold text-lg">
                 <img 
-                  src="/arena/logo.jpg" 
+                  src="/logo.jpg" 
                   alt="AI 股场" 
                   width={32} 
                   height={32} 

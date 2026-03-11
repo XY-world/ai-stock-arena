@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="lobsterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B6B"/>
+      <stop offset="100%" style="stop-color:#EE5A24"/>
+    </linearGradient>
+    <linearGradient id="bullGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d26a"/>
+      <stop offset="100%" style="stop-color:#00a854"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="100%" style="stop-color:#FFA500"/>
+    </linearGradient>
+    <linearGradient id="chartUp" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d26a"/>
+      <stop offset="100%" style="stop-color:#00ff88"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景圆 -->
+  <circle cx="100" cy="100" r="95" fill="#1a1a2e" stroke="url(#bullGrad)" stroke-width="3"/>
+  
+  <!-- 上涨曲线背景 -->
+  <path d="M15 160 Q40 155 60 145 T100 120 T140 80 T180 40" 
+        stroke="#00d26a" stroke-width="2" fill="none" opacity="0.3"/>
+  <path d="M15 170 Q40 165 60 155 T100 130 T140 90 T180 50" 
+        stroke="#00d26a" stroke-width="1" fill="none" opacity="0.2"/>
+  
+  <!-- 牛身体 -->
+  <ellipse cx="105" cy="130" rx="50" ry="30" fill="url(#bullGrad)"/>
+  
+  <!-- 牛头 -->
+  <ellipse cx="160" cy="115" rx="25" ry="22" fill="url(#bullGrad)"/>
+  
+  <!-- 牛角 (金色) -->
+  <path d="M150 95 Q145 75 155 65" stroke="url(#goldGrad)" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M170 95 Q175 75 165 65" stroke="url(#goldGrad)" stroke-width="6" fill="none" stroke-linecap="round"/>
+  
+  <!-- 牛眼睛 -->
+  <circle cx="165" cy="110" r="4" fill="#1a1a2e"/>
+  <circle cx="166" cy="109" r="1.5" fill="white"/>
+  
+  <!-- 牛鼻子 -->
+  <ellipse cx="175" cy="120" rx="8" ry="6" fill="#00a854"/>
+  <circle cx="172" cy="120" r="2" fill="#1a1a2e"/>
+  <circle cx="178" cy="120" r="2" fill="#1a1a2e"/>
+  
+  <!-- 牛腿 -->
+  <rect x="70" y="150" width="10" height="25" rx="3" fill="url(#bullGrad)"/>
+  <rect x="90" y="152" width="10" height="23" rx="3" fill="url(#bullGrad)"/>
+  <rect x="115" y="152" width="10" height="23" rx="3" fill="url(#bullGrad)"/>
+  <rect x="135" y="150" width="10" height="25" rx="3" fill="url(#bullGrad)"/>
+  
+  <!-- 牛尾巴 -->
+  <path d="M55 130 Q35 125 30 140 Q28 150 35 155" stroke="url(#bullGrad)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  
+  <!-- ===== 龙虾骑在牛上 ===== -->
+  
+  <!-- 龙虾身体 -->
+  <ellipse cx="100" cy="95" rx="22" ry="28" fill="url(#lobsterGrad)"/>
+  
+  <!-- 龙虾头 -->
+  <ellipse cx="100" cy="62" rx="16" ry="13" fill="url(#lobsterGrad)"/>
+  
+  <!-- 龙虾眼睛 -->
+  <circle cx="92" cy="58" r="5" fill="#1a1a2e"/>
+  <circle cx="108" cy="58" r="5" fill="#1a1a2e"/>
+  <circle cx="93" cy="57" r="2" fill="white"/>
+  <circle cx="109" cy="57" r="2" fill="white"/>
+  
+  <!-- 龙虾触须 -->
+  <path d="M88 50 Q70 35 55 40" stroke="#FF6B6B" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M112 50 Q130 35 145 40" stroke="#FF6B6B" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- 龙虾嘴巴 (开心) -->
+  <path d="M94 70 Q100 76 106 70" stroke="#c0392b" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- 龙虾钳子 (左) - 高举 -->
+  <ellipse cx="65" cy="75" rx="12" ry="8" fill="url(#lobsterGrad)" transform="rotate(-30 65 75)"/>
+  <ellipse cx="52" cy="65" rx="7" ry="4" fill="url(#lobsterGrad)" transform="rotate(-50 52 65)"/>
+  <ellipse cx="55" cy="80" rx="7" ry="4" fill="url(#lobsterGrad)" transform="rotate(10 55 80)"/>
+  
+  <!-- 龙虾钳子 (右) - 挥舞 -->
+  <ellipse cx="135" cy="75" rx="12" ry="8" fill="url(#lobsterGrad)" transform="rotate(30 135 75)"/>
+  <ellipse cx="148" cy="65" rx="7" ry="4" fill="url(#lobsterGrad)" transform="rotate(50 148 65)"/>
+  <ellipse cx="145" cy="80" rx="7" ry="4" fill="url(#lobsterGrad)" transform="rotate(-10 145 80)"/>
+  
+  <!-- 龙虾腿 (骑牛姿势) -->
+  <path d="M85 115 Q75 125 70 130" stroke="#EE5A24" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M115 115 Q125 125 130 130" stroke="#EE5A24" stroke-width="4" fill="none" stroke-linecap="round"/>
+  
+  <!-- 龙虾尾巴 -->
+  <path d="M90 118 Q100 135 110 118" stroke="#EE5A24" stroke-width="3" fill="none"/>
+  
+  <!-- 金币飞溅效果 -->
+  <circle cx="45" cy="50" r="6" fill="url(#goldGrad)" opacity="0.9"/>
+  <text x="45" y="53" font-size="7" fill="#8B4513" text-anchor="middle" font-weight="bold">$</text>
+  
+  <circle cx="155" cy="48" r="5" fill="url(#goldGrad)" opacity="0.8"/>
+  <text x="155" y="51" font-size="6" fill="#8B4513" text-anchor="middle" font-weight="bold">$</text>
+  
+  <circle cx="35" cy="70" r="4" fill="url(#goldGrad)" opacity="0.7"/>
+  
+  <!-- 速度线 -->
+  <line x1="20" y1="100" x2="40" y2="100" stroke="#00ff88" stroke-width="2" opacity="0.5"/>
+  <line x1="15" y1="115" x2="35" y2="115" stroke="#00ff88" stroke-width="1.5" opacity="0.4"/>
+  <line x1="25" y1="130" x2="45" y2="130" stroke="#00ff88" stroke-width="1" opacity="0.3"/>
+  
+  <!-- 牛市标签 -->
+  <text x="100" y="188" font-size="10" fill="#00ff88" text-anchor="middle" font-weight="bold" font-family="Arial">BULL MARKET</text>
+</svg>
