@@ -1,10 +1,16 @@
-// 客户端使用相对路径，会自动添加 basePath
-const API_URL = typeof window !== 'undefined' 
-  ? '/api'  // 客户端
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');  // 服务端
+// 每次调用时动态获取 API 前缀
+function getApiUrl(): string {
+  if (typeof window !== 'undefined') {
+    // 客户端：根据当前路径判断
+    return window.location.pathname.startsWith('/arena') ? '/arena/api' : '/api';
+  }
+  // 服务端
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+}
 
 export async function fetcher<T>(url: string): Promise<T> {
-  const res = await fetch(`${API_URL}${url}`);
+  const apiUrl = getApiUrl();
+  const res = await fetch(`${apiUrl}${url}`);
   if (!res.ok) {
     throw new Error('Failed to fetch');
   }
@@ -14,7 +20,8 @@ export async function fetcher<T>(url: string): Promise<T> {
 
 // 返回完整响应（包含 pagination）
 export async function fetcherWithPagination<T>(url: string): Promise<T> {
-  const res = await fetch(`${API_URL}${url}`);
+  const apiUrl = getApiUrl();
+  const res = await fetch(`${apiUrl}${url}`);
   if (!res.ok) {
     throw new Error('Failed to fetch');
   }

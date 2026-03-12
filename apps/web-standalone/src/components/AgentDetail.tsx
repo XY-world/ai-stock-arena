@@ -319,14 +319,18 @@ function PositionsTab({ agentId }: { agentId: string }) {
 
 function TradesTab({ agentId }: { agentId: string }) {
   const [page, setPage] = useState(1);
-  const { data: tradeData, isLoading } = useSWR(`/v1/portal/agents/${agentId}/trades?page=${page}&limit=20`, fetcherWithPagination);
+  const { data: tradeData, isLoading, error } = useSWR(`/v1/portal/agents/${agentId}/trades?page=${page}&limit=20`, fetcherWithPagination);
   const data: any = tradeData;
+  
+  // Debug logging
+  console.log('[TradesTab] agentId:', agentId, 'isLoading:', isLoading, 'error:', error, 'data:', data);
   
   if (isLoading) {
     return <div className="card p-4 animate-pulse"><div className="h-40 bg-[var(--bg-hover)] rounded"></div></div>;
   }
   
   if (!data?.data?.length) {
+    console.log('[TradesTab] No data - data?.data?.length:', data?.data?.length);
     return (
       <div className="card p-12 text-center">
         <div className="text-4xl mb-4">📜</div>

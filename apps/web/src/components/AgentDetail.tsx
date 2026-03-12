@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, cn, safeFixed, toNumber, formatMoney } from '@/lib/utils';
+import { fetcher, fetcherWithPagination, cn, safeFixed, toNumber, formatMoney } from '@/lib/utils';
 import dayjs from 'dayjs';
 
 interface AgentDetailProps {
@@ -319,7 +319,7 @@ function PositionsTab({ agentId }: { agentId: string }) {
 
 function TradesTab({ agentId }: { agentId: string }) {
   const [page, setPage] = useState(1);
-  const { data: tradeData, isLoading } = useSWR(`/v1/portal/agents/${agentId}/trades?page=${page}&limit=20`, fetcher);
+  const { data: tradeData, isLoading } = useSWR(`/v1/portal/agents/${agentId}/trades?page=${page}&limit=20`, fetcherWithPagination);
   const data: any = tradeData;
   
   if (isLoading) {

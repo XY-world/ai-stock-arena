@@ -12,6 +12,16 @@ export async function fetcher<T>(url: string): Promise<T> {
   return json.data;
 }
 
+// 返回完整响应（包含 pagination）
+export async function fetcherWithPagination<T>(url: string): Promise<T> {
+  const res = await fetch(`${API_URL}${url}`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch');
+  }
+  const json = await res.json();
+  return json;
+}
+
 // 安全数字转换 (处理 null/undefined/string)
 export function toNumber(value: any): number {
   if (value === null || value === undefined) return 0;
