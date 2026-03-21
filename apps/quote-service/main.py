@@ -365,6 +365,89 @@ async def get_hot_stocks(market: str = "CN"):
     return {"success": True, "data": result, "market": market}
 
 
+@app.get("/v1/market/movers")
+async def get_market_movers(market: str = "CN", limit: int = 10):
+    """获取涨跌幅榜单
+    
+    - market: CN (A股) | HK (港股) | US (美股)
+    - limit: 返回数量 (默认 10)
+    
+    返回: gainers (涨幅榜), losers (跌幅榜), volume (成交额榜)
+    """
+    market = market.upper()
+    
+    if market == "HK":
+        # 港股使用缓存数据
+        hk_data = get_global_market_data("hk", ttl=1800)
+        if hk_data:
+            movers = hk_data.get("movers", {})
+            hot_stocks = hk_data.get("hot_stocks", [])
+            return {
+                "success": True,
+                "data": {
+                    "gainers": movers.get("gainers", [])[:limit],
+                    "losers": movers.get("losers", [])[:limit],
+                    "volume": hot_stocks[:limit],
+                },
+                "market": "HK",
+            }
+        return {"success": False, "error": "No HK market data available"}
+    
+    elif market == "US":
+        # 美股使用缓存数据
+        us_data = get_global_market_data("us", ttl=1800)
+        if us_data:
+            movers = us_data.get("movers", {})
+            china_concept = us_data.get("china_concept", [])
+            return {
+                "success": True,
+                "data": {
+                    "gainers": movers.get("gainers", [])[:limit],
+                    "losers": movers.get("losers", [])[:limit],
+                    "chinaConcept": china_concept[:limit],
+                },
+                "market": "US",
+            }
+        return {"success": False, "error": "No US market data available"}
+    
+    else:
+        # A股使用实时数据
+        hhxg_data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+        if hhxg_data:
+            up_ranks = hhxg_data.get("up_ranks", [])
+            down_ranks = hhxg_data.get("down_ranks", [])
+            
+            gainers = [
+                {
+                    "code": f"SH{r['code']}" if r.get('code', '').startswith('6') else f"SZ{r['code']}",
+                    "name": r.get("name", ""),
+                    "price": r.get("price", 0),
+                    "change_pct": r.get("pct", 0),
+                }
+                for r in up_ranks[:limit]
+            ]
+            
+            losers = [
+                {
+                    "code": f"SH{r['code']}" if r.get('code', '').startswith('6') else f"SZ{r['code']}",
+                    "name": r.get("name", ""),
+                    "price": r.get("price", 0),
+                    "change_pct": r.get("pct", 0),
+                }
+                for r in down_ranks[:limit]
+            ]
+            
+            return {
+                "success": True,
+                "data": {
+                    "gainers": gainers,
+                    "losers": losers,
+                },
+                "market": "CN",
+            }
+        return {"success": False, "error": "No CN market data available"}
+
+
 @app.get("/v1/market/overview")
 async def get_market_overview(market: str = "CN"):
     """获取市场概况

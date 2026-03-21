@@ -68,6 +68,13 @@ export function MarketSection() {
     { refreshInterval: 300000 }
   );
   
+  // 港股/美股市场情绪
+  const { data: globalSentiment } = useSWR<any>(
+    market !== 'CN' ? `/v1/market/sentiment?market=${market}` : null,
+    fetcher,
+    { refreshInterval: 300000 }
+  );
+  
   // 热门股票
   const { data: hotStocks } = useSWR<any[]>(
     `/v1/market/hot?market=${market}&limit=5`,
@@ -440,8 +447,83 @@ export function MarketSection() {
           </div>
         ) : (
           <div className="pt-2 border-t border-[var(--border-light)]">
-            <div className="bg-[var(--bg-secondary)] rounded-lg p-4 text-center text-sm text-[var(--text-muted)]">
-              {marketConfig.label}市场情绪数据开发中...
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-muted)]">{closingLabel}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 涨跌分布 */}
+              <div className="bg-[var(--bg-secondary)] rounded-lg p-4">
+                <div className="text-xs text-[var(--text-muted)] mb-3">涨跌分布</div>
+                <div className="grid grid-cols-3 gap-4 text-center mb-3">
+                  <div>
+                    <div className="text-2xl font-bold text-up tabular-nums">{upCount}</div>
+                    <div className="text-xs text-[var(--text-muted)]">上涨</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-[var(--text-secondary)] tabular-nums">{flatCount}</div>
+                    <div className="text-xs text-[var(--text-muted)]">平盘</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-down tabular-nums">{downCount}</div>
+                    <div className="text-xs text-[var(--text-muted)]">下跌</div>
+                  </div>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden flex bg-[var(--bg-hover)]">
+                  <div className="bg-red-500 transition-all" style={{ width: `${upPct}%` }} />
+                  <div className="bg-green-500 transition-all" style={{ width: `${100 - upPct}%` }} />
+                </div>
+              </div>
+              
+              {/* 赚钱效应 */}
+              <div className="bg-[var(--bg-secondary)] rounded-lg p-4">
+                {(() => {
+                  const globalIndex = globalSentiment?.sentiment?.index || 0;
+                  const globalLabel = globalSentiment?.sentiment?.label || '';
+                  const totalAmount = overview?.totalAmountFormatted || globalSentiment?.totalAmountFormatted || '';
+                  
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs text-[var(--text-muted)]">赚钱效应</span>
+                        {globalLabel && (
+                          <span className={cn('text-sm font-medium', getSentimentColor(globalIndex))}>
+                            {globalLabel}
+                          </span>
+                        )}
+                      </div>
+                      {globalIndex > 0 ? (
+                        <div className="flex items-center gap-3">
+                          <span className={cn('text-4xl font-bold tabular-nums', getSentimentColor(globalIndex))}>
+                            {globalIndex.toFixed(0)}
+                          </span>
+                          <div className="flex-1">
+                            <div className="h-3 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                              <div 
+                                className={cn(
+                                  'h-full rounded-full transition-all',
+                                  globalIndex >= 60 ? 'bg-red-500' : 
+                                  globalIndex >= 40 ? 'bg-yellow-500' : 'bg-green-500'
+                                )}
+                                style={{ width: `${globalIndex}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between mt-1 text-xs text-[var(--text-muted)]">
+                              <span>冰点</span>
+                              <span>中性</span>
+                              <span>狂热</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-sm text-[var(--text-muted)]">
+                          {totalAmount && <div className="text-lg font-bold text-[var(--color-accent)]">成交额 {totalAmount}</div>}
+                          {!totalAmount && '数据加载中...'}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         )}

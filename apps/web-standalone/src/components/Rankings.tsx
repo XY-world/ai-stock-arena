@@ -10,8 +10,8 @@ type MarketType = 'CN' | 'HK' | 'US';
 
 const MARKET_CONFIG: Record<MarketType, { label: string; icon: string; symbol: string; active: boolean }> = {
   CN: { label: 'A股', icon: '', symbol: '¥', active: true },
-  HK: { label: '港股', icon: '', symbol: 'HK$', active: false },
-  US: { label: '美股', icon: '', symbol: '$', active: false },
+  HK: { label: '港股', icon: '', symbol: 'HK$', active: true },
+  US: { label: '美股', icon: '', symbol: '$', active: true },
 };
 
 export function Rankings() {
