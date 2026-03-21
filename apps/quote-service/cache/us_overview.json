@@ -1,0 +1,354 @@
+{
+  "overview": {
+    "market": "US",
+    "date": "2026-03-21",
+    "time": "21:20:08",
+    "stats": {
+      "total": 1000,
+      "up_count": 192,
+      "down_count": 800,
+      "flat_count": 8,
+      "total_volume": 20261565144
+    },
+    "buckets": [
+      {
+        "name": "涨>10%",
+        "count": 19,
+        "dir": "up"
+      },
+      {
+        "name": "涨5-10%",
+        "count": 16,
+        "dir": "up"
+      },
+      {
+        "name": "涨2-5%",
+        "count": 29,
+        "dir": "up"
+      },
+      {
+        "name": "涨0-2%",
+        "count": 128,
+        "dir": "up"
+      },
+      {
+        "name": "平盘",
+        "count": 8,
+        "dir": "flat"
+      },
+      {
+        "name": "跌0-2%",
+        "count": 304,
+        "dir": "down"
+      },
+      {
+        "name": "跌2-5%",
+        "count": 356,
+        "dir": "down"
+      },
+      {
+        "name": "跌5-10%",
+        "count": 112,
+        "dir": "down"
+      },
+      {
+        "name": "跌>10%",
+        "count": 28,
+        "dir": "down"
+      }
+    ],
+    "sentiment": {
+      "index": 19.2,
+      "label": "弱势"
+    }
+  },
+  "movers": {
+    "gainers": [
+      {
+        "code": "USANNAW",
+        "name": "AleAnna, Inc.",
+        "price": 0.73,
+        "change_pct": 97.44,
+        "volume": 1877974
+      },
+      {
+        "code": "USANNA",
+        "name": "AleAnna, Inc.",
+        "price": 7.07,
+        "change_pct": 86.54,
+        "volume": 115438485
+      },
+      {
+        "code": "USIBO",
+        "name": "Impact BioMedical, Inc.",
+        "price": 0.78,
+        "change_pct": 68.47,
+        "volume": 7372690
+      },
+      {
+        "code": "USSMCZ",
+        "name": "Defiance Daily Target 2X Short SMCI ETF",
+        "price": 60.76,
+        "change_pct": 65.05,
+        "volume": 2064318
+      },
+      {
+        "code": "USAZTR",
+        "name": "Azitra, Inc.",
+        "price": 0.28,
+        "change_pct": 60.59,
+        "volume": 515175105
+      },
+      {
+        "code": "USVCX",
+        "name": "Fundrise Growth Tech Fund LLC",
+        "price": 117.7,
+        "change_pct": 54.54,
+        "volume": 610599
+      },
+      {
+        "code": "USNIVFW",
+        "name": "NewGenIVF Group Ltd.",
+        "price": 0.02,
+        "change_pct": 53.91,
+        "volume": 1000
+      },
+      {
+        "code": "USWGSWW",
+        "name": "GeneDx Holdings Corp.",
+        "price": 0.01,
+        "change_pct": 53.33,
+        "volume": 102604
+      },
+      {
+        "code": "USPLU",
+        "name": "Defiance Daily Target 2X Long PL ETF",
+        "price": 38.1,
+        "change_pct": 50.12,
+        "volume": 756688
+      },
+      {
+        "code": "USDRMAW",
+        "name": "Dermata Therapeutics, Inc.",
+        "price": 0.02,
+        "change_pct": 38.55,
+        "volume": 67097
+      }
+    ],
+    "losers": [
+      {
+        "code": "USSMCL",
+        "name": "GraniteShares 2x Long SMCI Daily ETF",
+        "price": 1.43,
+        "change_pct": -66.74,
+        "volume": 58966920
+      },
+      {
+        "code": "USSMCX",
+        "name": "Defiance Daily Target 2X Long SMCI ETF",
+        "price": 7.25,
+        "change_pct": -66.57,
+        "volume": 25564565
+      },
+      {
+        "code": "USMGRX",
+        "name": "Mangoceuticals, Inc.",
+        "price": 0.16,
+        "change_pct": -54.51,
+        "volume": 3851783
+      },
+      {
+        "code": "USEDBLW",
+        "name": "Edible Garden AG , Inc.",
+        "price": 0.07,
+        "change_pct": -40.52,
+        "volume": 10540
+      },
+      {
+        "code": "USBGMSP",
+        "name": "Bio Green Med Solution, Inc.",
+        "price": 1.44,
+        "change_pct": -39.75,
+        "volume": 4218
+      },
+      {
+        "code": "USLIDRW",
+        "name": "AEye, Inc.",
+        "price": 0.05,
+        "change_pct": -39.44,
+        "volume": 187566
+      },
+      {
+        "code": "USQVCGA",
+        "name": "QVC Group, Inc.",
+        "price": 1.78,
+        "change_pct": -37.76,
+        "volume": 1289584
+      },
+      {
+        "code": "USLPCVW",
+        "name": "Launchpad Cadenza Acquisition Corp. I",
+        "price": 0.21,
+        "change_pct": -37.66,
+        "volume": 17218
+      },
+      {
+        "code": "USAIB",
+        "name": "BlockchAIn Digital Infrastructure, Inc.",
+        "price": 1.53,
+        "change_pct": -37.55,
+        "volume": 2562718
+      },
+      {
+        "code": "USGDC",
+        "name": "GD Culture Group Ltd.",
+        "price": 2.32,
+        "change_pct": -35.91,
+        "volume": 248672
+      }
+    ]
+  },
+  "china_concept": [
+    {
+      "code": "USBABA",
+      "name": "阿里巴巴",
+      "price": 122.41,
+      "change_pct": -1.99,
+      "volume": 15479264
+    },
+    {
+      "code": "USJD",
+      "name": "京东",
+      "price": 27.27,
+      "change_pct": -2.68,
+      "volume": 11150178
+    },
+    {
+      "code": "USPDD",
+      "name": "拼多多",
+      "price": 96.19,
+      "change_pct": -1.27,
+      "volume": 8527020
+    },
+    {
+      "code": "USBIDU",
+      "name": "百度",
+      "price": 114.26,
+      "change_pct": -3.99,
+      "volume": 2149501
+    },
+    {
+      "code": "USNIO",
+      "name": "蔚来",
+      "price": 5.43,
+      "change_pct": -7.81,
+      "volume": 52876563
+    },
+    {
+      "code": "USXPEV",
+      "name": "小鹏汽车",
+      "price": 17.55,
+      "change_pct": -8.36,
+      "volume": 14301623
+    },
+    {
+      "code": "USLI",
+      "name": "理想汽车",
+      "price": 16.7,
+      "change_pct": -2.34,
+      "volume": 3377092
+    },
+    {
+      "code": "USBILI",
+      "name": "哔哩哔哩",
+      "price": 24.08,
+      "change_pct": -4.18,
+      "volume": 3253458
+    },
+    {
+      "code": "USTME",
+      "name": "腾讯音乐",
+      "price": 10.09,
+      "change_pct": -1.94,
+      "volume": 12925837
+    },
+    {
+      "code": "USIQ",
+      "name": "爱奇艺",
+      "price": 1.23,
+      "change_pct": 0.0,
+      "volume": 7106733
+    },
+    {
+      "code": "USEDU",
+      "name": "新东方",
+      "price": 54.98,
+      "change_pct": -3.32,
+      "volume": 743517
+    },
+    {
+      "code": "USTAL",
+      "name": "好未来",
+      "price": 11.43,
+      "change_pct": 0.35,
+      "volume": 3026730
+    },
+    {
+      "code": "USNTES",
+      "name": "网易",
+      "price": 113.78,
+      "change_pct": -2.19,
+      "volume": 925917
+    },
+    {
+      "code": "USTCOM",
+      "name": "携程",
+      "price": 51.06,
+      "change_pct": -1.3,
+      "volume": 2118426
+    },
+    {
+      "code": "USVNET",
+      "name": "世纪互联",
+      "price": 8.82,
+      "change_pct": -5.77,
+      "volume": 6173908
+    },
+    {
+      "code": "USHTHT",
+      "name": "华住酒店集团",
+      "price": 50.13,
+      "change_pct": -0.79,
+      "volume": 2870999
+    },
+    {
+      "code": "USZTO",
+      "name": "中通",
+      "price": 24.46,
+      "change_pct": -3.21,
+      "volume": 2531392
+    },
+    {
+      "code": "USMNSO",
+      "name": "名创优品",
+      "price": 16.28,
+      "change_pct": -3.04,
+      "volume": 324268
+    },
+    {
+      "code": "USKC",
+      "name": "金山云",
+      "price": 13.27,
+      "change_pct": -9.11,
+      "volume": 2090221
+    },
+    {
+      "code": "USFUTU",
+      "name": "富途控股",
+      "price": 135.02,
+      "change_pct": -3.19,
+      "volume": 1446714
+    }
+  ],
+  "fetched_at": "2026-03-21T21:20:09.871954"
+}

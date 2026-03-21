@@ -423,11 +423,38 @@ async def get_market_overview(market: str = "CN"):
             print(f"Index fetch error: {e}")
     
     # 涨跌家数
-    if market == "HK" or market == "US":
-        # 港股/美股暂无涨跌家数数据
-        up_count = 0
-        down_count = 0
-        flat_count = 0
+    if market == "HK":
+        # 港股使用缓存数据
+        hk_data = get_global_market_data("hk", ttl=1800)
+        if hk_data and hk_data.get("overview"):
+            stats = hk_data["overview"].get("stats", {})
+            up_count = stats.get("up_count", 0)
+            down_count = stats.get("down_count", 0)
+            flat_count = stats.get("flat_count", 0)
+            total_amount = stats.get("total_amount", 0)
+            buckets_data = hk_data["overview"].get("buckets", [])
+        else:
+            up_count = 0
+            down_count = 0
+            flat_count = 0
+            total_amount = 0
+            buckets_data = []
+    elif market == "US":
+        # 美股使用缓存数据
+        us_data = get_global_market_data("us", ttl=1800)
+        if us_data and us_data.get("overview"):
+            stats = us_data["overview"].get("stats", {})
+            up_count = stats.get("up_count", 0)
+            down_count = stats.get("down_count", 0)
+            flat_count = stats.get("flat_count", 0)
+            total_amount = 0  # 美股暂无成交额
+            buckets_data = us_data["overview"].get("buckets", [])
+        else:
+            up_count = 0
+            down_count = 0
+            flat_count = 0
+            total_amount = 0
+            buckets_data = []
     else:
         # A股使用恢恢量化数据
         hhxg_data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
@@ -438,16 +465,28 @@ async def get_market_overview(market: str = "CN"):
         down_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "down" or "跌" in b.get("name", ""))
         total = market_data.get("total", 0)
         flat_count = total - up_count - down_count if total else 0
+        buckets_data = buckets
+        total_amount = market_data.get("total_amount", 0)
+    
+    # 构建响应
+    response_data = {
+        "indices": indices,
+        "upCount": up_count,
+        "downCount": down_count,
+        "flatCount": flat_count,
+        "timestamp": datetime.now().isoformat(),
+    }
+    
+    # 港股/美股添加更多数据
+    if market in ("HK", "US") and buckets_data:
+        response_data["buckets"] = buckets_data
+        if total_amount:
+            response_data["totalAmount"] = total_amount
+            response_data["totalAmountFormatted"] = f"{total_amount/100000000:.2f}亿"
     
     return {
         "success": True,
-        "data": {
-            "indices": indices,
-            "upCount": up_count,
-            "downCount": down_count,
-            "flatCount": flat_count,
-            "timestamp": datetime.now().isoformat(),
-        },
+        "data": response_data,
         "market": market,
     }
 
@@ -1039,6 +1078,8 @@ def run_hhxg_script(script: str, args: list = None) -> dict:
 # 缓存
 _hhxg_cache = {}
 _hhxg_cache_time = {}
+_global_cache = {}
+_global_cache_time = {}
 
 def get_hhxg_cached(key: str, script: str, args: list = None, ttl: int = 3600) -> dict:
     """带缓存的灰灰数据获取"""
@@ -1056,47 +1097,144 @@ def get_hhxg_cached(key: str, script: str, args: list = None, ttl: int = 3600) -
     return data
 
 
+def get_global_market_data(market: str, ttl: int = 1800) -> dict:
+    """获取港股/美股的缓存数据
+    
+    缓存文件由 scripts/fetch_hk_overview.py 和 fetch_us_overview.py 生成
+    """
+    import os
+    
+    now = datetime.now()
+    cache_key = f"global_{market}"
+    
+    # 检查内存缓存
+    if cache_key in _global_cache and cache_key in _global_cache_time:
+        if (now - _global_cache_time[cache_key]).seconds < ttl:
+            return _global_cache[cache_key]
+    
+    # 从文件读取
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    cache_file = os.path.join(script_dir, "cache", f"{market.lower()}_overview.json")
+    
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                _global_cache[cache_key] = data
+                _global_cache_time[cache_key] = now
+                return data
+        except Exception as e:
+            print(f"Error reading {cache_file}: {e}")
+    
+    return None
+
+
 @app.get("/v1/market/sentiment")
-async def get_sentiment():
+async def get_sentiment(market: str = "CN"):
     """获取市场情绪
+    
+    - market: CN (A股) | HK (港股) | US (美股)
     
     返回: 赚钱效应、涨跌家数、涨停数、炸板率等
     """
-    data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    market = market.upper()
     
-    if not data:
-        return {"success": False, "error": "Failed to fetch sentiment data"}
-    
-    market = data.get("market", {})
-    ai_summary = data.get("ai_summary", {})
-    
-    # 解析涨跌家数 - 使用 dir 或 name 字段判断（buckets 没有 pct_min/pct_max）
-    buckets = market.get("buckets", [])
-    up_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "up" or "涨" in b.get("name", ""))
-    down_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "down" or "跌" in b.get("name", ""))
-    flat_count = market.get("total", 0) - up_count - down_count
-    
-    return {
-        "success": True,
-        "data": {
-            "date": data.get("date"),
-            "summary": ai_summary.get("market_state", ""),
-            "focus": ai_summary.get("focus_direction", ""),
-            "sentiment": {
-                "index": market.get("sentiment_index", 0),
-                "label": market.get("sentiment_label", ""),
-                "upCount": up_count,
-                "downCount": down_count,
-                "flatCount": flat_count,
-                "total": market.get("total", 0),
-            },
-            "highlights": {
-                "theme": ai_summary.get("theme_focus", ""),
-                "hotmoney": ai_summary.get("hotmoney_state", ""),
-                "news": ai_summary.get("news_highlight", ""),
+    if market == "HK":
+        # 港股情绪数据
+        hk_data = get_global_market_data("hk", ttl=1800)
+        if not hk_data or not hk_data.get("overview"):
+            return {"success": False, "error": "No HK market data available"}
+        
+        overview = hk_data["overview"]
+        stats = overview.get("stats", {})
+        sentiment = overview.get("sentiment", {})
+        
+        return {
+            "success": True,
+            "data": {
+                "market": "HK",
+                "date": overview.get("date", ""),
+                "sentiment": {
+                    "index": sentiment.get("index", 50),
+                    "label": sentiment.get("label", "中性"),
+                    "upCount": stats.get("up_count", 0),
+                    "downCount": stats.get("down_count", 0),
+                    "flatCount": stats.get("flat_count", 0),
+                    "total": stats.get("total_traded", 0),
+                },
+                "buckets": overview.get("buckets", []),
+                "totalAmount": stats.get("total_amount", 0),
+                "totalAmountFormatted": stats.get("total_amount_formatted", ""),
             }
         }
-    }
+    
+    elif market == "US":
+        # 美股情绪数据
+        us_data = get_global_market_data("us", ttl=1800)
+        if not us_data or not us_data.get("overview"):
+            return {"success": False, "error": "No US market data available"}
+        
+        overview = us_data["overview"]
+        stats = overview.get("stats", {})
+        sentiment = overview.get("sentiment", {})
+        
+        return {
+            "success": True,
+            "data": {
+                "market": "US",
+                "date": overview.get("date", ""),
+                "sentiment": {
+                    "index": sentiment.get("index", 50),
+                    "label": sentiment.get("label", "中性"),
+                    "upCount": stats.get("up_count", 0),
+                    "downCount": stats.get("down_count", 0),
+                    "flatCount": stats.get("flat_count", 0),
+                    "total": stats.get("total", 0),
+                },
+                "buckets": overview.get("buckets", []),
+                "chinaConceptStocks": us_data.get("china_concept", []),
+            }
+        }
+    
+    else:
+        # A股使用原有的恢恢量化数据
+        data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+    
+        if not data:
+            return {"success": False, "error": "Failed to fetch sentiment data"}
+        
+        market_data = data.get("market", {})
+        ai_summary = data.get("ai_summary", {})
+        
+        # 解析涨跌家数 - 使用 dir 或 name 字段判断（buckets 没有 pct_min/pct_max）
+        buckets = market_data.get("buckets", [])
+        up_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "up" or "涨" in b.get("name", ""))
+        down_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "down" or "跌" in b.get("name", ""))
+        flat_count = market_data.get("total", 0) - up_count - down_count
+        
+        return {
+            "success": True,
+            "data": {
+                "market": "CN",
+                "date": data.get("date"),
+                "summary": ai_summary.get("market_state", ""),
+                "focus": ai_summary.get("focus_direction", ""),
+                "sentiment": {
+                    "index": market_data.get("sentiment_index", 0),
+                    "label": market_data.get("sentiment_label", ""),
+                    "upCount": up_count,
+                    "downCount": down_count,
+                    "flatCount": flat_count,
+                    "total": market_data.get("total", 0),
+                },
+                "buckets": buckets,
+                "highlights": {
+                    "theme": ai_summary.get("theme_focus", ""),
+                    "hotmoney": ai_summary.get("hotmoney_state", ""),
+                    "news": ai_summary.get("news_highlight", ""),
+                }
+            }
+        }
 
 
 @app.get("/v1/market/themes")

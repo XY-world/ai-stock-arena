@@ -1,0 +1,377 @@
+{
+  "overview": {
+    "market": "HK",
+    "date": "2026-03-21",
+    "time": "21:19:19",
+    "stats": {
+      "total_listed": 2488,
+      "total_traded": 2031,
+      "up_count": 642,
+      "down_count": 1220,
+      "flat_count": 169,
+      "total_amount": 255914386964.0,
+      "total_amount_hkd": 255914386964.0,
+      "total_amount_formatted": "2559.14亿"
+    },
+    "buckets": [
+      {
+        "name": "涨>10%",
+        "count": 30,
+        "dir": "up"
+      },
+      {
+        "name": "涨5-10%",
+        "count": 95,
+        "dir": "up"
+      },
+      {
+        "name": "涨2-5%",
+        "count": 168,
+        "dir": "up"
+      },
+      {
+        "name": "涨0-2%",
+        "count": 349,
+        "dir": "up"
+      },
+      {
+        "name": "平盘",
+        "count": 169,
+        "dir": "flat"
+      },
+      {
+        "name": "跌0-2%",
+        "count": 555,
+        "dir": "down"
+      },
+      {
+        "name": "跌2-5%",
+        "count": 443,
+        "dir": "down"
+      },
+      {
+        "name": "跌5-10%",
+        "count": 186,
+        "dir": "down"
+      },
+      {
+        "name": "跌>10%",
+        "count": 36,
+        "dir": "down"
+      }
+    ],
+    "sentiment": {
+      "index": 31.6,
+      "label": "偏弱"
+    }
+  },
+  "movers": {
+    "gainers": [
+      {
+        "code": "HK01546",
+        "name": "德莱建业",
+        "price": 0.295,
+        "change_pct": 41.14832,
+        "amount": 13967800.0
+      },
+      {
+        "code": "HK06063",
+        "name": "智中国际",
+        "price": 0.65,
+        "change_pct": 38.29787,
+        "amount": 9413960.0
+      },
+      {
+        "code": "HK01989",
+        "name": "广合科技",
+        "price": 96.0,
+        "change_pct": 33.55593,
+        "amount": 2775598166.0
+      },
+      {
+        "code": "HK01827",
+        "name": "卓珈控股",
+        "price": 0.94,
+        "change_pct": 32.39437,
+        "amount": 24700.0
+      },
+      {
+        "code": "HK08619",
+        "name": "NIU HOLDINGS",
+        "price": 0.26,
+        "change_pct": 30.0,
+        "amount": 2183201.0
+      },
+      {
+        "code": "HK00567",
+        "name": "大昌微线集团",
+        "price": 0.25,
+        "change_pct": 25.0,
+        "amount": 2919710.0
+      },
+      {
+        "code": "HK01643",
+        "name": "现代中药集团",
+        "price": 1.59,
+        "change_pct": 21.37405,
+        "amount": 11909560.0
+      },
+      {
+        "code": "HK01252",
+        "name": "中国天瑞水泥",
+        "price": 0.24,
+        "change_pct": 20.0,
+        "amount": 21995989.0
+      },
+      {
+        "code": "HK01632",
+        "name": "民商创科",
+        "price": 0.1,
+        "change_pct": 19.04762,
+        "amount": 8392.0
+      },
+      {
+        "code": "HK00433",
+        "name": "北方矿业",
+        "price": 0.087,
+        "change_pct": 14.47368,
+        "amount": 6942560.0
+      }
+    ],
+    "losers": [
+      {
+        "code": "HK00620",
+        "name": "大唐西市",
+        "price": 0.355,
+        "change_pct": -42.74194,
+        "amount": 17297580.0
+      },
+      {
+        "code": "HK01176",
+        "name": "珠光控股",
+        "price": 0.026,
+        "change_pct": -33.33333,
+        "amount": 1318854.0
+      },
+      {
+        "code": "HK08176",
+        "name": "超人智能",
+        "price": 0.056,
+        "change_pct": -30.8642,
+        "amount": 825780.0
+      },
+      {
+        "code": "HK01206",
+        "name": "同方泰德",
+        "price": 0.28,
+        "change_pct": -24.32432,
+        "amount": 1100180.0
+      },
+      {
+        "code": "HK08238",
+        "name": "惠陶集团",
+        "price": 0.14,
+        "change_pct": -23.49727,
+        "amount": 3416584.0
+      },
+      {
+        "code": "HK00022",
+        "name": "茂盛控股",
+        "price": 0.275,
+        "change_pct": -20.28985,
+        "amount": 9284900.0
+      },
+      {
+        "code": "HK01842",
+        "name": "植华集团",
+        "price": 0.042,
+        "change_pct": -19.23077,
+        "amount": 140380.0
+      },
+      {
+        "code": "HK01633",
+        "name": "上谕集团",
+        "price": 0.28,
+        "change_pct": -18.84058,
+        "amount": 5061570.0
+      },
+      {
+        "code": "HK09663",
+        "name": "国鸿氢能",
+        "price": 3.5,
+        "change_pct": -18.60465,
+        "amount": 3177820.0
+      },
+      {
+        "code": "HK01132",
+        "name": "橙天嘉禾",
+        "price": 0.065,
+        "change_pct": -17.72152,
+        "amount": 1175215.0
+      }
+    ]
+  },
+  "hot_stocks": [
+    {
+      "code": "HK09988",
+      "name": "阿里巴巴－Ｗ",
+      "price": 123.7,
+      "change_pct": -6.28788,
+      "amount": 25680463346.0,
+      "amount_formatted": "256.80亿"
+    },
+    {
+      "code": "HK01810",
+      "name": "小米集团－Ｗ",
+      "price": 33.2,
+      "change_pct": -8.59031,
+      "amount": 13463822641.0,
+      "amount_formatted": "134.64亿"
+    },
+    {
+      "code": "HK00700",
+      "name": "腾讯控股",
+      "price": 508.0,
+      "change_pct": -0.97466,
+      "amount": 12743703970.0,
+      "amount_formatted": "127.44亿"
+    },
+    {
+      "code": "HK00883",
+      "name": "中国海洋石油",
+      "price": 30.38,
+      "change_pct": 2.70453,
+      "amount": 7637753156.0,
+      "amount_formatted": "76.38亿"
+    },
+    {
+      "code": "HK03690",
+      "name": "美团－Ｗ",
+      "price": 79.15,
+      "change_pct": -1.92069,
+      "amount": 5140724068.0,
+      "amount_formatted": "51.41亿"
+    },
+    {
+      "code": "HK00981",
+      "name": "中芯国际",
+      "price": 56.9,
+      "change_pct": -4.76987,
+      "amount": 5015536159.0,
+      "amount_formatted": "50.16亿"
+    },
+    {
+      "code": "HK06869",
+      "name": "长飞光纤光缆",
+      "price": 153.8,
+      "change_pct": 5.48697,
+      "amount": 4810122030.0,
+      "amount_formatted": "48.10亿"
+    },
+    {
+      "code": "HK03750",
+      "name": "宁德时代",
+      "price": 698.0,
+      "change_pct": 8.38509,
+      "amount": 4287926274.0,
+      "amount_formatted": "42.88亿"
+    },
+    {
+      "code": "HK00175",
+      "name": "吉利汽车",
+      "price": 19.52,
+      "change_pct": 6.43403,
+      "amount": 4123883353.0,
+      "amount_formatted": "41.24亿"
+    },
+    {
+      "code": "HK01211",
+      "name": "比亚迪股份",
+      "price": 103.8,
+      "change_pct": 0.5814,
+      "amount": 4051943430.0,
+      "amount_formatted": "40.52亿"
+    },
+    {
+      "code": "HK02899",
+      "name": "紫金矿业",
+      "price": 34.22,
+      "change_pct": -1.38328,
+      "amount": 3818832761.0,
+      "amount_formatted": "38.19亿"
+    },
+    {
+      "code": "HK01299",
+      "name": "友邦保险",
+      "price": 86.05,
+      "change_pct": 3.92512,
+      "amount": 3368134526.0,
+      "amount_formatted": "33.68亿"
+    },
+    {
+      "code": "HK02259",
+      "name": "紫金黄金国际",
+      "price": 176.10001,
+      "change_pct": 5.51229,
+      "amount": 2934479729.0,
+      "amount_formatted": "29.34亿"
+    },
+    {
+      "code": "HK00939",
+      "name": "建设银行",
+      "price": 8.08,
+      "change_pct": -0.12361,
+      "amount": 2852919919.0,
+      "amount_formatted": "28.53亿"
+    },
+    {
+      "code": "HK01989",
+      "name": "广合科技",
+      "price": 96.0,
+      "change_pct": 33.55593,
+      "amount": 2775598166.0,
+      "amount_formatted": "27.76亿"
+    },
+    {
+      "code": "HK00005",
+      "name": "汇丰控股",
+      "price": 124.5,
+      "change_pct": 0.40323,
+      "amount": 2610492253.0,
+      "amount_formatted": "26.10亿"
+    },
+    {
+      "code": "HK01024",
+      "name": "快手－Ｗ",
+      "price": 53.8,
+      "change_pct": -2.80036,
+      "amount": 2583363137.0,
+      "amount_formatted": "25.83亿"
+    },
+    {
+      "code": "HK00941",
+      "name": "中国移动",
+      "price": 78.8,
+      "change_pct": -1.25313,
+      "amount": 2377131309.0,
+      "amount_formatted": "23.77亿"
+    },
+    {
+      "code": "HK09618",
+      "name": "京东集团－ＳＷ",
+      "price": 108.6,
+      "change_pct": -1.89702,
+      "amount": 2342630880.0,
+      "amount_formatted": "23.43亿"
+    },
+    {
+      "code": "HK00857",
+      "name": "中国石油股份",
+      "price": 10.91,
+      "change_pct": 1.67754,
+      "amount": 2238814294.0,
+      "amount_formatted": "22.39亿"
+    }
+  ],
+  "fetched_at": "2026-03-21T21:19:22.899396"
+}
