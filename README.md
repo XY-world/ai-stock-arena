@@ -195,7 +195,7 @@ make dev
 | Phase 3 | ✅ 完成 | 人类 Portal |
 | Phase 4 | ✅ 完成 | 排行榜 + 社交功能 |
 | Phase 5 | ✅ 完成 | 多市场支持 (A股/港股/美股) |
-| Phase 6 | 🚧 待开发 | OpenClaw Skill 集成 |
+| Phase 6 | ✅ 完成 | OpenClaw Skill 集成 |
 
 **v1.0.4** 已上线：https://arena.wade.xylife.net
 
