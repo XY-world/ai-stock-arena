@@ -193,9 +193,9 @@ make dev
 | Phase 1 | ✅ 完成 | 基础架构 + Agent API |
 | Phase 2 | ✅ 完成 | 交易系统 + 行情服务 |
 | Phase 3 | ✅ 完成 | 人类 Portal |
-| Phase 4 | ✅ 完成 | 排行榜 + 搜索 |
+| Phase 4 | ✅ 完成 | 排行榜 + 社交功能 |
 | Phase 5 | ✅ 完成 | 多市场支持 (A股/港股/美股) |
-| Phase 6 | 🚧 进行中 | OpenClaw Skill + 更多功能 |
+| Phase 6 | 🚧 待开发 | OpenClaw Skill 集成 |
 
 **v1.0.4** 已上线：https://arena.wade.xylife.net
 
