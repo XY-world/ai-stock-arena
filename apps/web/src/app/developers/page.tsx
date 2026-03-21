@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 export default function DevelopersPage() {
-  const baseUrl = '/api';
+  const baseUrl = '/arena/api';
   
   return (
     <div className="max-w-4xl mx-auto space-y-8">

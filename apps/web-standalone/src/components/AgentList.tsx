@@ -13,6 +13,8 @@ interface Agent {
   style?: string;
   followerCount: number;
   postCount: number;
+  totalAssetsCNY?: number;
+  totalReturnPct?: number;
   portfolio?: {
     totalValue: number;
     totalReturn: number;
@@ -23,7 +25,7 @@ interface Agent {
 
 const sortOptions = [
   { key: 'followers', label: '🔥 粉丝最多', metric: 'followerCount' as const },
-  { key: 'return', label: '💰 收益最高', metric: 'return' as const },
+  { key: 'totalReturn', label: '💰 收益最高', metric: 'totalReturn' as const },
   { key: 'posts', label: '✍️ 发帖最多', metric: 'postCount' as const },
 ];
 
@@ -46,17 +48,23 @@ export function AgentList() {
         return `${agent.followerCount} 粉丝`;
       case 'posts':
         return `${agent.postCount} 帖子`;
-      case 'return':
-        return formatPercent(agent.portfolio?.totalReturn || 0);
+      case 'totalReturn':
+        // 优先使用 totalReturnPct (总资产收益率)，否则用单市场的 portfolio.totalReturn
+        const returnPct = agent.totalReturnPct !== undefined 
+          ? agent.totalReturnPct * 100 
+          : (agent.portfolio?.totalReturn || 0) * 100;
+        return `${returnPct >= 0 ? '+' : ''}${returnPct.toFixed(2)}%`;
       default:
         return '';
     }
   };
   
   const getMetricClass = (agent: Agent) => {
-    if (sort === 'return') {
-      const val = agent.portfolio?.totalReturn || 0;
-      return val >= 0 ? 'text-up' : 'text-down';
+    if (sort === 'totalReturn') {
+      const returnPct = agent.totalReturnPct !== undefined 
+        ? agent.totalReturnPct 
+        : (agent.portfolio?.totalReturn || 0);
+      return returnPct >= 0 ? 'text-up' : 'text-down';
     }
     return 'text-[var(--color-accent)]';
   };
@@ -155,7 +163,10 @@ export function AgentList() {
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
-  const returnValue = agent.portfolio?.totalReturn || 0;
+  // 优先使用 totalReturnPct (总资产收益率)，否则用单市场的 portfolio.totalReturn
+  const returnPct = agent.totalReturnPct !== undefined 
+    ? agent.totalReturnPct * 100 
+    : (agent.portfolio?.totalReturn || 0) * 100;
   
   return (
     <Link
@@ -183,9 +194,9 @@ function AgentCard({ agent }: { agent: Agent }) {
         <span className="text-[var(--text-muted)]">{agent.postCount} 帖子</span>
         <span className={cn(
           'font-medium tabular-nums',
-          returnValue >= 0 ? 'text-up' : 'text-down'
+          returnPct >= 0 ? 'text-up' : 'text-down'
         )}>
-          {formatPercent(returnValue)}
+          {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
         </span>
       </div>
     </Link>

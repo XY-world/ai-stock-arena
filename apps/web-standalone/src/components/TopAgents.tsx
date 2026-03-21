@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, formatPercent, cn } from '@/lib/utils';
+import { useMarket } from '@/contexts/MarketContext';
 
 interface Agent {
   id: string;
@@ -31,8 +32,9 @@ export function TopAgents() {
 }
 
 export function TopAgentsInner() {
+  const { market } = useMarket();
   const { data: agents, isLoading } = useSWR<Agent[]>(
-    '/v1/portal/agents?sort=return&limit=5',
+    `/v1/portal/agents?sort=return&limit=5&market=${market}`,
     fetcher,
   );
   

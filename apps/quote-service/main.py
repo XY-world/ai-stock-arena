@@ -27,15 +27,34 @@ SINA_HEADERS = {"Referer": "https://finance.sina.com.cn"}
 
 # 股票代码映射 (内部格式 -> 新浪格式)
 def to_sina_code(code: str) -> str:
-    """SH600519 -> sh600519"""
-    return code.lower()
+    """SH600519 -> sh600519, HK00700 -> rt_hk00700, AAPL -> gb_aapl"""
+    code = code.upper()
+    if code.startswith("HK"):
+        return f"rt_hk{code[2:]}"
+    if code.startswith("SH") or code.startswith("SZ"):
+        return code.lower()
+    # 美股
+    return f"gb_{code.lower()}"
 
 def from_sina_code(code: str) -> str:
-    """sh600519 -> SH600519"""
+    """sh600519 -> SH600519, rt_hk00700 -> HK00700, gb_aapl -> AAPL"""
+    if code.startswith("rt_hk"):
+        return f"HK{code[5:]}"
+    if code.startswith("gb_"):
+        return code[3:].upper()
     return code.upper()
 
-# 热门股票列表
-HOT_STOCKS = [
+def get_market(code: str) -> str:
+    """获取市场类型: CN, HK, US"""
+    code = code.upper()
+    if code.startswith("HK"):
+        return "HK"
+    if code.startswith("SH") or code.startswith("SZ"):
+        return "CN"
+    return "US"
+
+# 热门股票列表 (A股)
+HOT_STOCKS_CN = [
     "SH600519",  # 贵州茅台
     "SZ000001",  # 平安银行
     "SH601318",  # 中国平安
@@ -58,12 +77,101 @@ HOT_STOCKS = [
     "SH600030",  # 中信证券
 ]
 
+# 热门股票列表 (港股)
+HOT_STOCKS_HK = [
+    "HK00700",   # 腾讯控股
+    "HK09988",   # 阿里巴巴
+    "HK03690",   # 美团
+    "HK09618",   # 京东集团
+    "HK00941",   # 中国移动
+    "HK01810",   # 小米集团
+    "HK09888",   # 百度集团
+    "HK02318",   # 中国平安
+    "HK00388",   # 香港交易所
+    "HK00005",   # 汇丰控股
+    "HK01299",   # 友邦保险
+    "HK02020",   # 安踏体育
+    "HK09999",   # 网易
+    "HK00175",   # 吉利汽车
+    "HK02382",   # 舜宇光学
+    "HK01211",   # 比亚迪股份
+    "HK00027",   # 银河娱乐
+    "HK00883",   # 中国海洋石油
+    "HK03968",   # 招商银行
+    "HK01024",   # 快手
+]
+
+# 美股热门
+HOT_STOCKS_US = [
+    "AAPL",    # 苹果
+    "MSFT",    # 微软
+    "GOOGL",   # 谷歌
+    "AMZN",    # 亚马逊
+    "NVDA",    # 英伟达
+    "META",    # Meta
+    "TSLA",    # 特斯拉
+    "BRK.B",   # 伯克希尔B
+    "JPM",     # 摩根大通
+    "V",       # Visa
+    "UNH",     # 联合健康
+    "MA",      # 万事达
+    "HD",      # 家得宝
+    "PG",      # 宝洁
+    "JNJ",     # 强生
+    "COST",    # 好市多
+    "ABBV",    # 艾伯维
+    "CRM",     # Salesforce
+    "AMD",     # AMD
+    "NFLX",    # 奈飞
+]
+
+# 美股中文名映射
+HOT_STOCKS_US_NAMES = {
+    "AAPL": "苹果",
+    "MSFT": "微软",
+    "GOOGL": "谷歌",
+    "AMZN": "亚马逊",
+    "NVDA": "英伟达",
+    "META": "Meta",
+    "TSLA": "特斯拉",
+    "BRK.B": "伯克希尔B",
+    "JPM": "摩根大通",
+    "V": "Visa",
+    "UNH": "联合健康",
+    "MA": "万事达",
+    "HD": "家得宝",
+    "PG": "宝洁",
+    "JNJ": "强生",
+    "COST": "好市多",
+    "ABBV": "艾伯维",
+    "CRM": "Salesforce",
+    "AMD": "AMD",
+    "NFLX": "奈飞",
+}
+
+# 合并的热门股票
+HOT_STOCKS = HOT_STOCKS_CN
+
 # 指数代码
 INDEX_CODES = {
     "上证指数": "sh000001",
     "深证成指": "sz399001",
     "创业板指": "sz399006",
     "科创50": "sh000688",
+}
+
+# 港股指数
+INDEX_CODES_HK = {
+    "恒生指数": "rt_hkHSI",
+    "恒生科技": "rt_hkHSTECH",
+    "国企指数": "rt_hkHSCEI",
+}
+
+# 美股指数
+INDEX_CODES_US = {
+    "道琼斯": "gb_$dji",
+    "标普500": "gb_$inx",
+    "纳斯达克": "gb_$ixic",
 }
 
 
@@ -86,44 +194,106 @@ def parse_sina_response(text: str, original_codes: list[str]) -> dict:
     """解析新浪返回数据"""
     result = {}
     
-    # 匹配 var hq_str_sh600519="...";
-    pattern = r'var hq_str_(\w+)="([^"]+)";'
+    # 匹配 var hq_str_sh600519="..."; 或 var hq_str_rt_hk00700="...";
+    pattern = r'var hq_str_([\w$]+)="([^"]+)";'
     matches = re.findall(pattern, text)
     
     for sina_code, data_str in matches:
         if not data_str:
             continue
-            
-        parts = data_str.split(",")
-        if len(parts) < 32:
-            continue
         
         code = from_sina_code(sina_code)
+        market = get_market(code)
+        parts = data_str.split(",")
         
         try:
-            result[code] = {
-                "code": code,
-                "name": parts[0],
-                "open": safe_float(parts[1]),
-                "preClose": safe_float(parts[2]),
-                "price": safe_float(parts[3]),
-                "high": safe_float(parts[4]),
-                "low": safe_float(parts[5]),
-                "volume": safe_int(parts[8]),
-                "amount": safe_float(parts[9]),
-                "date": parts[30],
-                "time": parts[31],
-            }
-            
-            # 计算涨跌
-            price = result[code]["price"]
-            pre_close = result[code]["preClose"]
-            if pre_close and pre_close > 0:
-                result[code]["change"] = price - pre_close
-                result[code]["changePct"] = (price - pre_close) / pre_close
+            if market == "HK":
+                # 港股数据格式
+                if len(parts) < 15:
+                    continue
+                result[code] = {
+                    "code": code,
+                    "market": "HK",
+                    "currency": "HKD",
+                    "name": parts[1],
+                    "nameEn": parts[0],
+                    "open": safe_float(parts[3]),
+                    "preClose": safe_float(parts[2]),
+                    "price": safe_float(parts[6]),
+                    "high": safe_float(parts[4]),
+                    "low": safe_float(parts[5]),
+                    "volume": safe_int(parts[11]),
+                    "amount": safe_float(parts[10]),
+                    "date": parts[15] if len(parts) > 15 else "",
+                    "time": parts[16] if len(parts) > 16 else "",
+                }
+                # 计算涨跌
+                price = result[code]["price"]
+                pre_close = result[code]["preClose"]
+                if pre_close and pre_close > 0:
+                    result[code]["change"] = price - pre_close
+                    result[code]["changePct"] = (price - pre_close) / pre_close
+                else:
+                    result[code]["change"] = 0
+                    result[code]["changePct"] = 0
             else:
-                result[code]["change"] = 0
-                result[code]["changePct"] = 0
+                # 检查是否是美股
+                if sina_code.startswith("gb_"):
+                    # 美股数据格式: 名称,当前价,涨跌额,时间,涨跌幅,开盘,最高,最低,52周最高,52周最低,成交量,10日均量,市值,市盈率,EPS,...,收盘价
+                    if len(parts) < 20:
+                        continue
+                    result[code] = {
+                        "code": code,
+                        "market": "US",
+                        "currency": "USD",
+                        "name": HOT_STOCKS_US_NAMES.get(code, parts[0]),  # 使用预定义中文名
+                        "open": safe_float(parts[5]),
+                        "preClose": safe_float(parts[26]) if len(parts) > 26 else safe_float(parts[5]),
+                        "price": safe_float(parts[1]),
+                        "high": safe_float(parts[6]),
+                        "low": safe_float(parts[7]),
+                        "volume": safe_int(parts[10]),
+                        "amount": 0,  # 美股没有金额字段
+                        "date": parts[3].split(" ")[0] if parts[3] else "",
+                        "time": parts[3].split(" ")[1] if " " in parts[3] else "",
+                    }
+                    # 计算涨跌
+                    price = result[code]["price"]
+                    pre_close = result[code]["preClose"]
+                    if pre_close and pre_close > 0:
+                        result[code]["change"] = price - pre_close
+                        result[code]["changePct"] = (price - pre_close) / pre_close
+                    else:
+                        result[code]["change"] = 0
+                        result[code]["changePct"] = 0
+                else:
+                    # A股数据格式
+                    if len(parts) < 32:
+                        continue
+                    result[code] = {
+                        "code": code,
+                        "market": "CN",
+                        "currency": "CNY",
+                        "name": parts[0],
+                        "open": safe_float(parts[1]),
+                        "preClose": safe_float(parts[2]),
+                        "price": safe_float(parts[3]),
+                        "high": safe_float(parts[4]),
+                        "low": safe_float(parts[5]),
+                        "volume": safe_int(parts[8]),
+                        "amount": safe_float(parts[9]),
+                        "date": parts[30],
+                        "time": parts[31],
+                    }
+                    # 计算涨跌
+                    price = result[code]["price"]
+                    pre_close = result[code]["preClose"]
+                    if pre_close and pre_close > 0:
+                        result[code]["change"] = price - pre_close
+                        result[code]["changePct"] = (price - pre_close) / pre_close
+                    else:
+                        result[code]["change"] = 0
+                        result[code]["changePct"] = 0
                 
         except Exception as e:
             print(f"Parse error for {sina_code}: {e}")
@@ -167,32 +337,59 @@ async def get_quotes(codes: str):
 
 
 @app.get("/v1/market/hot")
-async def get_hot_stocks():
-    """获取热门股票"""
-    quotes = await fetch_sina_quotes(HOT_STOCKS)
+async def get_hot_stocks(market: str = "CN"):
+    """获取热门股票
+    
+    - market: CN (A股) | HK (港股) | US (美股) | ALL (全部)
+    """
+    market = market.upper()
+    
+    if market == "HK":
+        stocks = HOT_STOCKS_HK
+    elif market == "US":
+        stocks = HOT_STOCKS_US
+    elif market == "ALL":
+        stocks = HOT_STOCKS_CN + HOT_STOCKS_HK + HOT_STOCKS_US
+    else:
+        stocks = HOT_STOCKS_CN
+    
+    quotes = await fetch_sina_quotes(stocks)
     
     # 按涨跌幅排序
     result = sorted(
-        [quotes[c] for c in HOT_STOCKS if c in quotes],
+        [quotes[c] for c in stocks if c in quotes],
         key=lambda x: x.get("changePct", 0),
         reverse=True
     )
     
-    return {"success": True, "data": result}
+    return {"success": True, "data": result, "market": market}
 
 
 @app.get("/v1/market/overview")
-async def get_market_overview():
-    """获取市场概况"""
+async def get_market_overview(market: str = "CN"):
+    """获取市场概况
+    
+    - market: CN (A股) | HK (港股) | US (美股)
+    """
+    market = market.upper()
+    
+    # 选择指数
+    if market == "HK":
+        index_codes = INDEX_CODES_HK
+    elif market == "US":
+        index_codes = INDEX_CODES_US
+    else:
+        index_codes = INDEX_CODES
+    
     # 获取指数数据
-    index_codes_list = list(INDEX_CODES.values())
+    index_codes_list = list(index_codes.values())
     url = SINA_API + ",".join(index_codes_list)
     
     indices = {}
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             resp = await client.get(url, headers=SINA_HEADERS)
-            pattern = r'var hq_str_(\w+)="([^"]+)";'
+            pattern = r'var hq_str_([\w$]+)="([^"]+)";'
             matches = re.findall(pattern, resp.text)
             
             for sina_code, data_str in matches:
@@ -203,10 +400,19 @@ async def get_market_overview():
                     continue
                 
                 # 找到对应的中文名
-                for name, code in INDEX_CODES.items():
+                for name, code in index_codes.items():
                     if code == sina_code:
-                        price = safe_float(parts[3])
-                        pre_close = safe_float(parts[2])
+                        if market == "HK":
+                            # 港股指数格式不同
+                            price = safe_float(parts[6]) if len(parts) > 6 else safe_float(parts[0])
+                            pre_close = safe_float(parts[3]) if len(parts) > 3 else price
+                        elif market == "US":
+                            # 美股指数格式: 名称,当前价,涨跌额,涨跌幅,昨收,开盘,...
+                            price = safe_float(parts[1]) if len(parts) > 1 else 0
+                            pre_close = safe_float(parts[26]) if len(parts) > 26 else price
+                        else:
+                            price = safe_float(parts[3])
+                            pre_close = safe_float(parts[2])
                         indices[name] = {
                             "code": sina_code,
                             "price": price,
@@ -216,16 +422,33 @@ async def get_market_overview():
         except Exception as e:
             print(f"Index fetch error: {e}")
     
-    # 涨跌家数 (模拟数据，实际需要另外接口)
+    # 涨跌家数
+    if market == "HK" or market == "US":
+        # 港股/美股暂无涨跌家数数据
+        up_count = 0
+        down_count = 0
+        flat_count = 0
+    else:
+        # A股使用恢恢量化数据
+        hhxg_data = get_hhxg_cached("snapshot", "fetch_snapshot.py", ttl=3600)
+        market_data = hhxg_data.get("market", {}) if hhxg_data else {}
+        buckets = market_data.get("buckets", [])
+        
+        up_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "up" or "涨" in b.get("name", ""))
+        down_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "down" or "跌" in b.get("name", ""))
+        total = market_data.get("total", 0)
+        flat_count = total - up_count - down_count if total else 0
+    
     return {
         "success": True,
         "data": {
             "indices": indices,
-            "upCount": 2500,
-            "downCount": 2500,
-            "flatCount": 200,
+            "upCount": up_count,
+            "downCount": down_count,
+            "flatCount": flat_count,
             "timestamp": datetime.now().isoformat(),
-        }
+        },
+        "market": market,
     }
 
 
@@ -562,8 +785,12 @@ async def get_indicators(code: str, period: str = "daily"):
 # ========== 估值/基本面 ==========
 
 async def fetch_tencent_quote(code: str) -> dict:
-    """从腾讯获取行情数据 (包含 PE/PB)"""
-    tencent_code = to_sina_code(code)  # 格式相同
+    """从腾讯获取行情数据 (包含 PE/PB) - 仅支持 A股"""
+    market = get_market(code)
+    if market != "CN":
+        return {}  # 腾讯 API 只支持 A股
+    
+    tencent_code = to_sina_code(code)
     
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
@@ -603,6 +830,81 @@ async def fetch_tencent_quote(code: str) -> dict:
             return {}
 
 
+async def fetch_hk_fundamental(code: str) -> dict:
+    """从新浪获取港股估值数据"""
+    sina_code = to_sina_code(code)  # rt_hkXXXXX
+    url = SINA_API + sina_code
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(url, headers=SINA_HEADERS)
+            # 格式: var hq_str_rt_hkXXXXX="TENCENT,腾讯控股,505.000,513.000,519.000,505.000,508.000,-5.000,-0.975,508.000,508.500,12743703970.890,24924662,18.481,0.000,683.000,415.374,..."
+            match = re.search(r'var hq_str_[\w]+="([^"]+)"', resp.text)
+            if not match:
+                return {}
+            
+            parts = match.group(1).split(",")
+            if len(parts) < 17:
+                return {}
+            
+            # 港股数据字段:
+            # 0: 英文名, 1: 中文名, 2: 昨收, 3: 开盘, 4: 最高, 5: 最低, 6: 最新价
+            # 7: 涨跌额, 8: 涨跌幅, 9: 买入, 10: 卖出, 11: 成交额, 12: 成交量
+            # 13: 市盈率, 14: 52周最高, 15: 52周最低, 16: 市值(亿港元)
+            return {
+                "code": code,
+                "name": parts[1],
+                "price": safe_float(parts[6]),
+                "preClose": safe_float(parts[2]),
+                "pe": safe_float(parts[13]) if len(parts) > 13 else 0,
+                "high52w": safe_float(parts[14]) if len(parts) > 14 else 0,
+                "low52w": safe_float(parts[15]) if len(parts) > 15 else 0,
+                "marketCap": safe_float(parts[16]) if len(parts) > 16 else 0,
+            }
+        except Exception as e:
+            print(f"HK fundamental error: {e}")
+            return {}
+
+
+async def fetch_us_fundamental(code: str) -> dict:
+    """从新浪获取美股估值数据"""
+    sina_code = to_sina_code(code)  # gb_xxxx
+    url = SINA_API + sina_code
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(url, headers=SINA_HEADERS)
+            match = re.search(r'var hq_str_[\w$]+="([^"]+)"', resp.text)
+            if not match:
+                return {}
+            
+            parts = match.group(1).split(",")
+            if len(parts) < 20:
+                return {}
+            
+            # 美股数据字段:
+            # 0: 名称, 1: 当前价, 2: 涨跌额, 3: 时间, 4: 涨跌幅
+            # 5: 开盘, 6: 最高, 7: 最低, 8: 52周最高, 9: 52周最低
+            # 10: 成交量, 11: 10日均量, 12: 市值, 13: 市盈率, 14: EPS
+            # 15: Beta, 16: 股息, 17: 股息率, 18: 总股本, 19: 股东权益
+            return {
+                "code": code,
+                "name": HOT_STOCKS_US_NAMES.get(code, parts[0]),
+                "price": safe_float(parts[1]),
+                "preClose": safe_float(parts[26]) if len(parts) > 26 else 0,
+                "pe": safe_float(parts[13]) if len(parts) > 13 else 0,
+                "eps": safe_float(parts[14]) if len(parts) > 14 else 0,
+                "high52w": safe_float(parts[8]) if len(parts) > 8 else 0,
+                "low52w": safe_float(parts[9]) if len(parts) > 9 else 0,
+                "marketCap": safe_float(parts[12]) if len(parts) > 12 else 0,
+                "dividend": safe_float(parts[16]) if len(parts) > 16 else 0,
+                "dividendYield": safe_float(parts[17]) if len(parts) > 17 else 0,
+            }
+        except Exception as e:
+            print(f"US fundamental error: {e}")
+            return {}
+
+
 @app.get("/v1/market/fundamental/{code}")
 async def get_fundamental(code: str):
     """获取基本面/估值数据
@@ -610,9 +912,64 @@ async def get_fundamental(code: str):
     返回: PE, PB, 市值等估值指标
     """
     code = code.upper()
+    market = get_market(code)
     
-    # 从腾讯获取估值数据
-    quote = await fetch_tencent_quote(code)
+    quote = None
+    
+    if market == "HK":
+        quote = await fetch_hk_fundamental(code)
+        if quote:
+            return {
+                "success": True,
+                "data": {
+                    "code": code,
+                    "name": quote.get("name", code),
+                    "market": "HK",
+                    "valuation": {
+                        "pe": quote.get("pe", 0),
+                        "pb": 0,  # 港股暂无 PB 数据
+                        "marketCap": quote.get("marketCap", 0),
+                        "marketCapFloat": 0,
+                        "high52w": quote.get("high52w", 0),
+                        "low52w": quote.get("low52w", 0),
+                    },
+                    "price": {
+                        "current": quote.get("price", 0),
+                        "preClose": quote.get("preClose", 0),
+                        "changePct": round((quote.get("price", 0) - quote.get("preClose", 1)) / quote.get("preClose", 1) * 100, 2) if quote.get("preClose") else 0,
+                    },
+                }
+            }
+    elif market == "US":
+        quote = await fetch_us_fundamental(code)
+        if quote:
+            return {
+                "success": True,
+                "data": {
+                    "code": code,
+                    "name": quote.get("name", code),
+                    "market": "US",
+                    "valuation": {
+                        "pe": quote.get("pe", 0),
+                        "pb": 0,  # 美股暂无 PB 数据
+                        "marketCap": quote.get("marketCap", 0),
+                        "marketCapFloat": 0,
+                        "eps": quote.get("eps", 0),
+                        "high52w": quote.get("high52w", 0),
+                        "low52w": quote.get("low52w", 0),
+                        "dividend": quote.get("dividend", 0),
+                        "dividendYield": quote.get("dividendYield", 0),
+                    },
+                    "price": {
+                        "current": quote.get("price", 0),
+                        "preClose": quote.get("preClose", 0),
+                        "changePct": round((quote.get("price", 0) - quote.get("preClose", 1)) / quote.get("preClose", 1) * 100, 2) if quote.get("preClose") else 0,
+                    },
+                }
+            }
+    else:
+        # A股从腾讯获取
+        quote = await fetch_tencent_quote(code)
     
     if not quote:
         # 回退到新浪数据
@@ -631,6 +988,7 @@ async def get_fundamental(code: str):
         "data": {
             "code": code,
             "name": quote.get("name", code),
+            "market": "CN",
             "valuation": {
                 "pe": quote.get("pe", 0),
                 "pb": quote.get("pb", 0),
@@ -712,11 +1070,11 @@ async def get_sentiment():
     market = data.get("market", {})
     ai_summary = data.get("ai_summary", {})
     
-    # 解析涨跌家数
+    # 解析涨跌家数 - 使用 dir 或 name 字段判断（buckets 没有 pct_min/pct_max）
     buckets = market.get("buckets", [])
-    up_count = sum(b.get("count", 0) for b in buckets if b.get("pct_min", 0) > 0)
-    down_count = sum(b.get("count", 0) for b in buckets if b.get("pct_max", 0) < 0)
-    flat_count = sum(b.get("count", 0) for b in buckets if b.get("pct_min", 0) <= 0 <= b.get("pct_max", 0))
+    up_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "up" or "涨" in b.get("name", ""))
+    down_count = sum(b.get("count", 0) for b in buckets if b.get("dir") == "down" or "跌" in b.get("name", ""))
+    flat_count = market.get("total", 0) - up_count - down_count
     
     return {
         "success": True,

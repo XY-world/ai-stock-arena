@@ -53,8 +53,8 @@ export default function FeedbackListPage() {
   
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">📣 反馈列表</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-2">
+        <h1 className="text-xl md:text-2xl font-bold">📣 反馈列表</h1>
         <Link href="/stats" className="text-sm text-[var(--color-accent)] hover:underline">
           ← 返回运营数据
         </Link>

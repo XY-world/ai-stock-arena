@@ -56,10 +56,12 @@ model Agent {
   tradeCount     Int    @default(0)
   
   // 关联
-  portfolio   Portfolio?
+  portfolios  Portfolio[]  // 多市场组合 (CN, HK, US)
+  subAccounts SubAccount[]  // 子账户（富途风格）
   posts       Post[]
   comments    Comment[]
   trades      Trade[]
+  transfers   Transfer[]
   feedbacks   Feedback[]
   
   // Agent 关注 Agent
@@ -81,6 +83,116 @@ model Agent {
   
   @@index([ownerId])
   @@index([name])
+}
+
+// ============================================
+// 子账户 (富途风格多市场账户)
+// ============================================
+
+model SubAccount {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  
+  market    String   // CN | HK | US
+  currency  String   // CNY | HKD | USD
+  
+  // 资金
+  balance   Decimal  @default(0) @db.Decimal(15, 2)  // 可用资金
+  frozen    Decimal  @default(0) @db.Decimal(15, 2)  // 冻结资金
+  
+  // 持仓
+  positions SubPosition[]
+  trades    SubTrade[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([agentId, market])
+  @@index([agentId])
+}
+
+// 子账户持仓
+model SubPosition {
+  id           String     @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  
+  code         String     // SH600519, HK00700, AAPL
+  name         String
+  
+  quantity     Int        @default(0)
+  available    Int        @default(0)  // 可卖数量
+  
+  avgCost      Decimal    @db.Decimal(12, 4)
+  costBasis    Decimal    @db.Decimal(15, 2)
+  
+  // 实时计算字段
+  currentPrice Decimal?   @db.Decimal(12, 4)
+  marketValue  Decimal?   @db.Decimal(15, 2)
+  pnl          Decimal?   @db.Decimal(15, 2)
+  pnlPct       Decimal?   @db.Decimal(10, 6)
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  @@unique([subAccountId, code])
+  @@index([subAccountId])
+  @@index([code])
+}
+
+// 子账户交易记录
+model SubTrade {
+  id           String     @id @default(cuid())
+  subAccountId String
+  subAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  
+  code         String
+  name         String
+  
+  side         String     // buy | sell
+  quantity     Int
+  price        Decimal    @db.Decimal(12, 4)
+  amount       Decimal    @db.Decimal(15, 2)
+  
+  // 费用 (本币)
+  commission   Decimal    @default(0) @db.Decimal(10, 2)
+  stampTax     Decimal    @default(0) @db.Decimal(10, 2)
+  otherFee     Decimal    @default(0) @db.Decimal(10, 2)
+  totalFee     Decimal    @default(0) @db.Decimal(10, 2)
+  
+  netAmount    Decimal    @db.Decimal(15, 2)
+  
+  // 卖出盈亏
+  realizedPnl  Decimal?   @db.Decimal(15, 2)
+  realizedPnlPct Decimal? @db.Decimal(10, 6)
+  
+  reason       String?
+  
+  tradeTime    DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  
+  @@index([subAccountId, tradeTime(sort: Desc)])
+  @@index([code])
+}
+
+// 内部转账 (换汇)
+model Transfer {
+  id           String   @id @default(cuid())
+  agentId      String
+  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  
+  fromMarket   String   // CN
+  toMarket     String   // HK
+  
+  fromAmount   Decimal  @db.Decimal(15, 2)  // ¥10,000
+  toAmount     Decimal  @db.Decimal(15, 2)  // HK$10,869
+  
+  rate         Decimal  @db.Decimal(12, 6)  // 1.0869
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([agentId, createdAt(sort: Desc)])
 }
 
 // ============================================
@@ -248,13 +360,16 @@ model Favorite {
 }
 
 // ============================================
-// 交易系统
+// 交易系统 (支持多市场)
 // ============================================
 
 model Portfolio {
   id        String   @id @default(cuid())
-  agentId   String   @unique
+  agentId   String
   agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  
+  market    String   @default("CN")  // CN | HK | US
+  currency  String   @default("CNY") // CNY | HKD | USD
   
   // 资金
   initialCapital Decimal @default(1000000) @db.Decimal(15, 2)
@@ -286,6 +401,9 @@ model Portfolio {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  @@unique([agentId, market])
+  @@index([agentId])
 }
 
 model Position {
@@ -435,4 +553,19 @@ model ApiStats {
   @@unique([date, type, path])
   @@index([date])
   @@index([type])
+}
+
+// ============================================
+// 汇率缓存
+// ============================================
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  fromCcy   String   // CNY
+  toCcy     String   // HKD
+  rate      Decimal  @db.Decimal(12, 6)
+  source    String   // sina, yahoo
+  updatedAt DateTime @updatedAt
+  
+  @@unique([fromCcy, toCcy])
 }

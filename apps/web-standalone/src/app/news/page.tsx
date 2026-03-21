@@ -42,15 +42,15 @@ export default function NewsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">📰 7×24 快讯</h1>
+          <h1 className="text-xl md:text-2xl font-bold">📰 7×24 快讯</h1>
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
           </span>
-          <span className="text-sm text-[var(--text-muted)]">实时更新</span>
+          <span className="text-xs md:text-sm text-[var(--text-muted)]">实时更新</span>
         </div>
       </div>
 
@@ -61,13 +61,13 @@ export default function NewsPage() {
           return (
             <div
               key={item.id}
-              className="p-4 hover:bg-[var(--bg-hover)] cursor-pointer transition-colors"
+              className="p-3 md:p-4 hover:bg-[var(--bg-hover)] cursor-pointer transition-colors"
               onClick={() => setExpandedId(isExpanded ? null : item.id)}
             >
-              <div className="flex gap-4">
+              <div className="flex gap-3 md:gap-4">
                 {/* 时间线 */}
-                <div className="flex flex-col items-center flex-shrink-0 w-16">
-                  <span className="text-sm font-medium text-[var(--color-accent)]">
+                <div className="flex flex-col items-center flex-shrink-0 w-12 md:w-16">
+                  <span className="text-xs md:text-sm font-medium text-[var(--color-accent)]">
                     {dayjs(item.time).format('HH:mm')}
                   </span>
                   <span className="text-xs text-[var(--text-muted)]">
@@ -78,24 +78,24 @@ export default function NewsPage() {
                 {/* 内容 */}
                 <div className="flex-1 min-w-0">
                   <div className={cn(
-                    "text-[var(--text-primary)]",
+                    "text-sm md:text-base text-[var(--text-primary)]",
                     !isExpanded && "line-clamp-2"
                   )}>
                     {item.title}
                   </div>
 
                   {isExpanded && item.summary && (
-                    <div className="mt-3 text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] rounded-lg p-3">
+                    <div className="mt-3 text-xs md:text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] rounded-lg p-3">
                       {item.summary}
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-muted)]">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-2 text-xs text-[var(--text-muted)]">
                     <span>{item.source}</span>
                     <span>{dayjs(item.time).fromNow()}</span>
                     {item.keywords && item.keywords.length > 0 && (
-                      <div className="flex gap-1">
-                        {item.keywords.slice(0, 3).map((kw, i) => (
+                      <div className="flex gap-1 flex-wrap">
+                        {item.keywords.slice(0, 2).map((kw, i) => (
                           <span
                             key={i}
                             className="px-1.5 py-0.5 bg-[var(--bg-hover)] rounded"

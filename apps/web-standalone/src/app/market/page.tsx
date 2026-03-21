@@ -46,17 +46,17 @@ export default function MarketPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">📊 市场情绪</h1>
+    <div className="space-y-4 md:space-y-6">
+      <h1 className="text-xl md:text-2xl font-bold">📊 市场情绪</h1>
 
       {/* 情绪指数大卡片 */}
-      <div className="card p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="card p-4 md:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* 赚钱效应 */}
-          <div className={cn("rounded-xl p-6 bg-gradient-to-br", getSentimentBg(sentimentIndex))}>
+          <div className={cn("rounded-xl p-4 md:p-6 bg-gradient-to-br", getSentimentBg(sentimentIndex))}>
             <div className="text-sm text-[var(--text-muted)] mb-2">赚钱效应</div>
             <div className="flex items-end gap-2 mb-3">
-              <span className={cn("text-5xl font-bold tabular-nums", getSentimentColor(sentimentIndex))}>
+              <span className={cn("text-4xl md:text-5xl font-bold tabular-nums", getSentimentColor(sentimentIndex))}>
                 {sentimentIndex.toFixed(1)}
               </span>
               <span className="text-[var(--text-muted)] mb-2">%</span>
@@ -72,22 +72,22 @@ export default function MarketPage() {
             </div>
           </div>
 
-          {/* 涨跌分布 */}
-          {sentiment?.sentiment && (
-            <div className="rounded-xl p-6 bg-[var(--bg-secondary)]">
+          {/* 涨跌分布 - 优先使用 overview 数据，fallback 到 sentiment */}
+          {(overview || sentiment?.sentiment) && (
+            <div className="rounded-xl p-4 md:p-6 bg-[var(--bg-secondary)]">
               <div className="text-sm text-[var(--text-muted)] mb-4">涨跌分布</div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-up">上涨</span>
-                  <span className="text-2xl font-bold text-up tabular-nums">{sentiment.sentiment.upCount ?? 0}</span>
+                  <span className="text-2xl font-bold text-up tabular-nums">{overview?.upCount ?? sentiment?.sentiment?.upCount ?? 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[var(--text-secondary)]">平盘</span>
-                  <span className="text-2xl font-bold text-[var(--text-secondary)] tabular-nums">{sentiment.sentiment.flatCount ?? 0}</span>
+                  <span className="text-2xl font-bold text-[var(--text-secondary)] tabular-nums">{overview?.flatCount ?? sentiment?.sentiment?.flatCount ?? 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-down">下跌</span>
-                  <span className="text-2xl font-bold text-down tabular-nums">{sentiment.sentiment.downCount ?? 0}</span>
+                  <span className="text-2xl font-bold text-down tabular-nums">{overview?.downCount ?? sentiment?.sentiment?.downCount ?? 0}</span>
                 </div>
               </div>
             </div>
@@ -95,10 +95,10 @@ export default function MarketPage() {
 
           {/* 连板天梯 */}
           {ladder && (
-            <div className="rounded-xl p-6 bg-[var(--bg-secondary)]">
+            <div className="rounded-xl p-4 md:p-6 bg-[var(--bg-secondary)]">
               <div className="text-sm text-[var(--text-muted)] mb-4">🪜 连板天梯</div>
-              <div className="flex items-center gap-4 mb-4">
-                <span className="text-4xl font-bold text-[var(--color-accent)]">{ladder.maxStreak ?? 0}板</span>
+              <div className="flex items-center gap-3 md:gap-4 mb-4">
+                <span className="text-3xl md:text-4xl font-bold text-[var(--color-accent)]">{ladder.maxStreak ?? 0}板</span>
                 {ladder.topStreak && (
                   <div>
                     <div className="font-medium">{ladder.topStreak.name}</div>
@@ -124,15 +124,15 @@ export default function MarketPage() {
 
       {/* 大盘指数 */}
       {indicesList.length > 0 && (
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold mb-4">📊 大盘指数</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card p-4 md:p-6">
+          <h2 className="text-base md:text-lg font-semibold mb-4">📊 大盘指数</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {indicesList.map((idx) => {
               const isUp = idx.changePct >= 0;
               return (
-                <div key={idx.name} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
-                  <div className="text-sm text-[var(--text-muted)] mb-1">{idx.name}</div>
-                  <div className={cn("text-xl font-bold tabular-nums", isUp ? "text-up" : "text-down")}>
+                <div key={idx.name} className="p-3 md:p-4 bg-[var(--bg-secondary)] rounded-lg">
+                  <div className="text-xs md:text-sm text-[var(--text-muted)] mb-1">{idx.name}</div>
+                  <div className={cn("text-lg md:text-xl font-bold tabular-nums", isUp ? "text-up" : "text-down")}>
                     {idx.price.toFixed(2)}
                   </div>
                   <div className={cn("text-sm tabular-nums", isUp ? "text-up" : "text-down")}>
@@ -147,16 +147,16 @@ export default function MarketPage() {
 
       {/* 热门题材 */}
       {themes?.themes && themes.themes.length > 0 && (
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold mb-4">🔥 热门题材</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card p-4 md:p-6">
+          <h2 className="text-base md:text-lg font-semibold mb-4">🔥 热门题材</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {themes.themes.map((theme: any, i: number) => (
               <div
                 key={theme.name}
-                className="flex items-center gap-3 p-4 bg-[var(--bg-secondary)] rounded-lg"
+                className="flex items-center gap-3 p-3 md:p-4 bg-[var(--bg-secondary)] rounded-lg"
               >
                 <span className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                  "w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold",
                   i === 0 ? "bg-red-500 text-white" :
                   i === 1 ? "bg-orange-500 text-white" :
                   i === 2 ? "bg-yellow-500 text-black" :
@@ -184,9 +184,9 @@ export default function MarketPage() {
 
       {/* 热门股票 */}
       {hotStocks && hotStocks.length > 0 && (
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold mb-4">📈 热门股票</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-4 md:p-6">
+          <h2 className="text-base md:text-lg font-semibold mb-4">📈 热门股票</h2>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {hotStocks.slice(0, 12).map((stock: any, i: number) => {
               const changePct = (stock.changePct ?? 0) * 100;
               const isUp = changePct >= 0;
@@ -194,11 +194,11 @@ export default function MarketPage() {
                 <Link
                   key={stock.code}
                   href={`/stocks/${stock.code}`}
-                  className="p-4 bg-[var(--bg-secondary)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+                  className="p-3 md:p-4 bg-[var(--bg-secondary)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className={cn(
-                      "w-6 h-6 rounded flex items-center justify-center text-xs font-bold",
+                      "w-5 h-5 md:w-6 md:h-6 rounded flex items-center justify-center text-xs font-bold",
                       i < 3 ? "bg-red-500 text-white" : "bg-[var(--bg-hover)] text-[var(--text-muted)]"
                     )}>
                       {i + 1}
@@ -210,10 +210,10 @@ export default function MarketPage() {
                       {isUp ? '+' : ''}{changePct.toFixed(2)}%
                     </span>
                   </div>
-                  <div className="font-medium">{stock.name}</div>
-                  <div className="text-sm text-[var(--text-muted)]">{stock.code}</div>
+                  <div className="font-medium text-sm md:text-base">{stock.name}</div>
+                  <div className="text-xs md:text-sm text-[var(--text-muted)]">{stock.code}</div>
                   <div className={cn(
-                    "text-lg font-bold tabular-nums mt-1",
+                    "text-base md:text-lg font-bold tabular-nums mt-1",
                     isUp ? "text-up" : "text-down"
                   )}>
                     ¥{(stock.price ?? 0).toFixed(2)}

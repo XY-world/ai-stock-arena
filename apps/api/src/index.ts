@@ -19,6 +19,7 @@ import { searchRoutes } from './routes/search.js';
 import { likeRoutes } from './routes/likes.js';
 import { followRoutes } from './routes/follows.js';
 import { notificationRoutes } from './routes/notifications.js';
+import { subAccountRoutes } from './routes/subaccount.js';
 import { incrementApiCall, incrementPageView } from './services/stats.js';
 
 // ============================================
@@ -115,6 +116,11 @@ await app.register(searchRoutes, { prefix: '/v1/search' });
 await app.register(likeRoutes, { prefix: '/v1/likes' });
 await app.register(followRoutes, { prefix: '/v1/follows' });
 await app.register(notificationRoutes, { prefix: '/v1/notifications' });
+
+// 子账户 (富途风格)
+await app.register(async (instance) => {
+  await subAccountRoutes(instance, prisma);
+}, { prefix: '/v1/accounts' });
 
 // ============================================
 // Start

@@ -22,9 +22,9 @@ const createCommentSchema = z.object({
 });
 
 const tradeSchema = z.object({
-  stockCode: z.string().regex(/^(SH|SZ)\d{6}$/),
+  stockCode: z.string().regex(/^(SH|SZ)\d{6}$|^HK\d{5}$/),
   side: z.enum(['buy', 'sell']),
-  shares: z.number().int().positive().multipleOf(100),
+  shares: z.number().int().positive(),
   reason: z.string().min(1).max(1000),
 });
 
@@ -238,11 +238,49 @@ export async function agentRoutes(app: FastifyInstance) {
     const agent = (request as any).agent;
     const body = tradeSchema.parse(request.body);
     
+    // 根据股票代码判断市场
+    const stockCode = body.stockCode.toUpperCase();
+    let market: 'CN' | 'HK' | 'US' = 'CN';
+    let currency = 'CNY';
+    
+    if (stockCode.startsWith('HK')) {
+      market = 'HK';
+      currency = 'HKD';
+    } else if (!stockCode.startsWith('SH') && !stockCode.startsWith('SZ')) {
+      market = 'US';
+      currency = 'USD';
+    }
+    
+    // 查找或创建对应市场的 Portfolio
+    let portfolio = await prisma.portfolio.findUnique({
+      where: {
+        agentId_market: { agentId: agent.id, market },
+      },
+    });
+    
+    if (!portfolio) {
+      // 不同市场不同初始资金: A股100万CNY, 港股100万HKD, 美股10万USD
+      const initialCapital = market === 'US' ? 100000 : 1000000;
+      
+      // 自动创建新市场的 Portfolio
+      portfolio = await prisma.portfolio.create({
+        data: {
+          agentId: agent.id,
+          market,
+          currency,
+          initialCapital,
+          cash: initialCapital,
+          totalValue: initialCapital,
+          marketValue: 0,
+        },
+      });
+    }
+    
     const tradingService = new TradingService(prisma, redis);
     
     try {
       const result = await tradingService.executeTrade(
-        agent.portfolio.id,
+        portfolio.id,
         agent.id,
         body.stockCode,
         body.side,
@@ -273,17 +311,78 @@ export async function agentRoutes(app: FastifyInstance) {
     preHandler: [agentAuth],
   }, async (request: FastifyRequest) => {
     const agent = (request as any).agent;
+    const query = request.query as { market?: string };
+    const market = query.market?.toUpperCase() || 'CN';
     
-    const portfolio = await prisma.portfolio.findUnique({
+    // 查找指定市场的 Portfolio
+    let portfolio = await prisma.portfolio.findUnique({
+      where: {
+        agentId_market: { agentId: agent.id, market },
+      },
+      include: {
+        positions: true,
+      },
+    });
+    
+    // 如果没有，返回空的 Portfolio 结构
+    if (!portfolio) {
+      const currency = market === 'HK' ? 'HKD' : market === 'US' ? 'USD' : 'CNY';
+      const initialCapital = market === 'US' ? 100000 : 1000000;
+      return {
+        success: true,
+        data: {
+          market,
+          currency,
+          initialCapital,
+          cash: initialCapital,
+          totalValue: initialCapital,
+          marketValue: 0,
+          positions: [],
+        },
+      };
+    }
+    
+    return {
+      success: true,
+      data: portfolio,
+    };
+  });
+  
+  // 查询所有市场的 Portfolio
+  app.get('/portfolios', {
+    preHandler: [agentAuth],
+  }, async (request: FastifyRequest) => {
+    const agent = (request as any).agent;
+    
+    const portfolios = await prisma.portfolio.findMany({
       where: { agentId: agent.id },
       include: {
         positions: true,
       },
     });
     
+    // 确保三个市场都有数据
+    const markets = ['CN', 'HK', 'US'];
+    const result = markets.map(market => {
+      const existing = portfolios.find((p: any) => p.market === market);
+      if (existing) return existing;
+      
+      const currency = market === 'HK' ? 'HKD' : market === 'US' ? 'USD' : 'CNY';
+      const initialCapital = market === 'US' ? 100000 : 1000000;
+      return {
+        market,
+        currency,
+        initialCapital,
+        cash: initialCapital,
+        totalValue: initialCapital,
+        marketValue: 0,
+        positions: [],
+      };
+    });
+    
     return {
       success: true,
-      data: portfolio,
+      data: result,
     };
   });
   

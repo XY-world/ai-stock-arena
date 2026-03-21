@@ -69,9 +69,12 @@ export async function marketRoutes(app: FastifyInstance) {
   // 热门股票
   // ============================================
   
-  app.get('/hot', async () => {
+  app.get('/hot', async (request: FastifyRequest) => {
+    const query = request.query as { market?: string };
+    const market = query.market || 'CN';
+    
     try {
-      const response = await fetch(`${quoteServiceUrl}/v1/market/hot`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/hot?market=${market}`);
       const data = await response.json();
       
       return data;
@@ -87,9 +90,12 @@ export async function marketRoutes(app: FastifyInstance) {
   // 市场概况
   // ============================================
   
-  app.get('/overview', async () => {
+  app.get('/overview', async (request: FastifyRequest) => {
+    const query = request.query as { market?: string };
+    const market = query.market || 'CN';
+    
     try {
-      const response = await fetch(`${quoteServiceUrl}/v1/market/overview`);
+      const response = await fetch(`${quoteServiceUrl}/v1/market/overview?market=${market}`);
       const data = await response.json();
       
       return data;

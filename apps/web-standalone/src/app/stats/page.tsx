@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function StatsPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">📊 运营数据</h1>
+      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">📊 运营数据</h1>
       <Stats />
     </div>
   );

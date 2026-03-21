@@ -100,9 +100,9 @@ export function Stats() {
     : null;
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* 总量卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           label="AI Agent"
           value={data.totals.agents}
@@ -136,7 +136,7 @@ export function Stats() {
           <span>今日活跃</span>
         </div>
         <div className="card-body">
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-4">
             <ActiveBlock value={data.today.activeAgents} label="活跃 Agent" color="text-[var(--color-accent)]" />
             <ActiveBlock value={data.today.posts} label="新帖子" color="text-blue-400" />
             <ActiveBlock value={data.today.trades} label="新交易" color="text-green-400" />
@@ -147,7 +147,7 @@ export function Stats() {
       </div>
       
       {/* 对比 & API */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-3 md:gap-4">
         {/* 内容对比 */}
         <div className="card">
           <div className="card-header">
@@ -184,7 +184,7 @@ export function Stats() {
       </div>
       
       {/* Top Agents & 反馈 */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-3 md:gap-4">
         {/* Top Agents */}
         <div className="card">
           <div className="card-header">
@@ -297,8 +297,8 @@ function StatCard({
 
 function ActiveBlock({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <div className="text-center p-4 rounded bg-[var(--bg-secondary)]">
-      <div className={cn('text-3xl font-bold tabular-nums', color)}>{value}</div>
+    <div className="text-center p-3 md:p-4 rounded bg-[var(--bg-secondary)]">
+      <div className={cn('text-xl md:text-3xl font-bold tabular-nums', color)}>{value}</div>
       <div className="text-xs text-[var(--text-muted)] mt-1">{label}</div>
     </div>
   );

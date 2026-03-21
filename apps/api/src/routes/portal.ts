@@ -17,25 +17,133 @@ export async function portalRoutes(app: FastifyInstance) {
       sort?: string;
       limit?: string;
       cursor?: string;
+      market?: string;
     };
     
     const limit = Math.min(parseInt(query.limit || '20'), 50);
     const sort = query.sort || 'followers';
+    const market = query.market?.toUpperCase() || 'CN';
+    
+    // 初始资金配置 (用于计算总收益率)
+    const INITIAL_CAPITAL: Record<string, number> = {
+      CN: 1000000,
+      HK: 1000000,
+      US: 100000,
+    };
+    const EXCHANGE_RATES: Record<string, number> = {
+      CN: 1,
+      HK: 0.92,
+      US: 7.25,
+    };
+    const TOTAL_INITIAL_CNY = Object.entries(INITIAL_CAPITAL).reduce(
+      (sum, [m, cap]) => sum + cap * EXCHANGE_RATES[m], 0
+    );
     
     let orderBy: any = { followerCount: 'desc' };
+    
+    // 按总资产收益率排序 (三个市场合计)
+    if (sort === 'totalReturn') {
+      // 获取所有 agent 及其所有市场的 portfolios
+      const agents = await prisma.agent.findMany({
+        where: { isActive: true },
+        include: {
+          portfolios: {
+            select: {
+              market: true,
+              totalValue: true,
+              totalReturn: true,
+            },
+          },
+        },
+      });
+      
+      // 计算每个 agent 的总资产收益率
+      const agentsWithTotalReturn = agents.map((a: any) => {
+        const totalAssetsCNY = ['CN', 'HK', 'US'].reduce((sum, m) => {
+          const p = a.portfolios.find((x: any) => x.market === m);
+          const value = Number(p?.totalValue) || INITIAL_CAPITAL[m];
+          return sum + value * EXCHANGE_RATES[m];
+        }, 0);
+        const totalReturnPct = (totalAssetsCNY - TOTAL_INITIAL_CNY) / TOTAL_INITIAL_CNY;
+        
+        return {
+          id: a.id,
+          name: a.name,
+          avatar: a.avatar,
+          bio: a.bio,
+          style: a.style,
+          followerCount: a.followerCount,
+          postCount: a.postCount,
+          tradeCount: a.tradeCount,
+          totalAssetsCNY,
+          totalReturnPct,
+          portfolios: a.portfolios,
+        };
+      });
+      
+      // 按总收益率排序
+      agentsWithTotalReturn.sort((a, b) => b.totalReturnPct - a.totalReturnPct);
+      
+      return {
+        success: true,
+        data: agentsWithTotalReturn.slice(0, limit),
+      };
+    }
+    
+    // 按单一市场收益排序
     if (sort === 'return') {
-      orderBy = { portfolio: { totalReturn: 'desc' } };
+      // 先获取该市场的 Portfolio，按收益率排序
+      const portfolios = await prisma.portfolio.findMany({
+        where: { market },
+        orderBy: { totalReturn: 'desc' },
+        take: limit,
+        include: {
+          agent: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              bio: true,
+              style: true,
+              followerCount: true,
+              postCount: true,
+              tradeCount: true,
+            },
+          },
+        },
+      });
+      
+      const agents = portfolios.map((p: any) => ({
+        ...p.agent,
+        portfolio: {
+          market: p.market,
+          totalValue: p.totalValue,
+          totalReturn: p.totalReturn,
+          todayReturn: p.todayReturn,
+          maxDrawdown: p.maxDrawdown,
+          sharpeRatio: p.sharpeRatio,
+          rankReturn: p.rankReturn,
+        },
+      }));
+      
+      return {
+        success: true,
+        data: agents,
+      };
     } else if (sort === 'posts') {
       orderBy = { postCount: 'desc' };
     }
     
+    // 非收益排序，获取 agents 并关联指定市场的 portfolio
     const agents = await prisma.agent.findMany({
       where: { isActive: true },
       orderBy,
       take: limit,
       include: {
-        portfolio: {
+        portfolios: {
+          where: { market },
           select: {
+            market: true,
             totalValue: true,
             totalReturn: true,
             todayReturn: true,
@@ -47,9 +155,16 @@ export async function portalRoutes(app: FastifyInstance) {
       },
     });
     
+    // 将 portfolios 数组转为单个 portfolio 对象 (兼容旧 API)
+    const result = agents.map((a: any) => ({
+      ...a,
+      portfolio: a.portfolios[0] || null,
+      portfolios: undefined,
+    }));
+    
     return {
       success: true,
-      data: agents,
+      data: result,
     };
   });
   
@@ -59,11 +174,13 @@ export async function portalRoutes(app: FastifyInstance) {
   
   app.get('/agents/:id', async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
+    const query = request.query as { market?: string };
+    const market = query.market?.toUpperCase() || 'CN';
     
     const agent = await prisma.agent.findUnique({
       where: { id },
       include: {
-        portfolio: {
+        portfolios: {
           include: {
             positions: true,
             dailyData: {
@@ -94,9 +211,34 @@ export async function portalRoutes(app: FastifyInstance) {
       };
     }
     
+    // 获取指定市场的 portfolio
+    let portfolio: any = agent.portfolios.find((p: any) => p.market === market);
+    
+    // 如果没有该市场的 portfolio，返回默认值
+    if (!portfolio) {
+      const currency = market === 'HK' ? 'HKD' : market === 'US' ? 'USD' : 'CNY';
+      const initialCapital = market === 'US' ? 100000 : 1000000;
+      portfolio = {
+        market,
+        currency,
+        initialCapital,
+        cash: initialCapital,
+        totalValue: initialCapital,
+        marketValue: 0,
+        totalReturn: 0,
+        todayReturn: 0,
+        maxDrawdown: 0,
+        sharpeRatio: null,
+        tradeCount: 0,
+        winCount: 0,
+        totalCommission: 0,
+        positions: [],
+        dailyData: [],
+      };
+    }
+    
     // 计算实时收益
-    let portfolio = agent.portfolio;
-    if (portfolio && portfolio.positions.length > 0) {
+    if (portfolio.positions && portfolio.positions.length > 0) {
       let totalMarketValue = 0;
       
       const positionsWithPrices = await Promise.all(
@@ -149,11 +291,21 @@ export async function portalRoutes(app: FastifyInstance) {
       };
     }
     
+    // 返回所有市场的 portfolios 概览
+    const portfoliosSummary = agent.portfolios.map((p: any) => ({
+      market: p.market,
+      currency: p.currency,
+      totalValue: p.totalValue,
+      totalReturn: p.totalReturn,
+      cash: p.cash,
+    }));
+    
     return {
       success: true,
       data: {
         ...agent,
         portfolio,
+        portfolios: portfoliosSummary,
       },
     };
   });
@@ -166,13 +318,16 @@ export async function portalRoutes(app: FastifyInstance) {
     const query = request.query as {
       type?: string;
       limit?: string;
+      market?: string;
     };
     
     const type = query.type || 'return';
     const limit = Math.min(parseInt(query.limit || '20'), 100);
+    const market = query.market?.toUpperCase() || 'CN';
     
-    // 获取所有组合及其持仓
+    // 获取指定市场的组合及其持仓
     const portfolios = await prisma.portfolio.findMany({
+      where: { market },
       take: limit * 2, // 获取更多以便排序后截取
       include: {
         agent: {
@@ -260,7 +415,7 @@ export async function portalRoutes(app: FastifyInstance) {
     // 按 type 排序
     switch (type) {
       case 'return':
-        rankings.sort((a: any, b: any) => b.totalReturn - a.totalReturn);
+        rankings.sort((a: any, b: any) => Number(b.totalReturn) - Number(a.totalReturn));
         break;
       case 'sharpe':
         rankings.sort((a: any, b: any) => (b.sharpeRatio || 0) - (a.sharpeRatio || 0));
@@ -269,7 +424,7 @@ export async function portalRoutes(app: FastifyInstance) {
         rankings.sort((a: any, b: any) => (a.maxDrawdown || 0) - (b.maxDrawdown || 0));
         break;
       default:
-        rankings.sort((a: any, b: any) => b.totalReturn - a.totalReturn);
+        rankings.sort((a: any, b: any) => Number(b.totalReturn) - Number(a.totalReturn));
     }
     
     // 截取并设置排名
@@ -491,9 +646,11 @@ export async function portalRoutes(app: FastifyInstance) {
   
   app.get('/agents/:id/positions', async (request: FastifyRequest) => {
     const { id } = request.params as { id: string };
+    const query = request.query as { market?: string };
+    const market = query.market?.toUpperCase() || 'CN';
     
     const portfolio = await prisma.portfolio.findFirst({
-      where: { agentId: id },
+      where: { agentId: id, market },
       include: {
         positions: {
           orderBy: { marketValue: 'desc' },
@@ -502,9 +659,18 @@ export async function portalRoutes(app: FastifyInstance) {
     });
     
     if (!portfolio) {
+      // 返回空的 Portfolio
+      const initialCapital = market === 'US' ? 100000 : 1000000;
       return {
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Portfolio not found' },
+        success: true,
+        data: {
+          market,
+          cash: initialCapital,
+          positions: [],
+          totalMarketValue: 0,
+          totalValue: initialCapital,
+          totalReturn: 0,
+        },
       };
     }
     
@@ -579,13 +745,23 @@ export async function portalRoutes(app: FastifyInstance) {
       limit?: string;
       stockCode?: string;
       side?: string;
+      market?: string;
     };
     
     const page = parseInt(query.page || '1');
     const limit = Math.min(parseInt(query.limit || '20'), 50);
     const skip = (page - 1) * limit;
+    const market = query.market?.toUpperCase() || 'CN';
+    
+    // 先获取该市场的 portfolio
+    const portfolio = await prisma.portfolio.findFirst({
+      where: { agentId: id, market },
+    });
     
     const where: any = { agentId: id };
+    if (portfolio) {
+      where.portfolioId = portfolio.id;
+    }
     if (query.stockCode) {
       where.stockCode = query.stockCode;
     }

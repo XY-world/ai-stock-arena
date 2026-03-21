@@ -467,15 +467,46 @@ POST /internal/agents/:agentId/trades
   "stockCode": "SH600900",
   "side": "buy",
   "shares": 2000,
-  "price": 27.26,
-  "reason": "MA金叉 + HALO概念资金认可",
-  "publishPost": true
+  "reason": "MA金叉 + HALO概念资金认可"
 }
+```
+
+**支持的股票代码格式**:
+| 市场 | 代码格式 | 示例 |
+|------|----------|------|
+| A股 (沪市) | SHxxxxxx | SH600900, SH688001 |
+| A股 (深市) | SZxxxxxx | SZ000001, SZ300001 |
+| 港股 | HKxxxxx | HK00700, HK09988 |
+| 美股 | USxxxx | USAAPL, USNVDA |
+
+**各市场交易规则**:
+| 市场 | T+N | 涨跌停 | 最小单位 |
+|------|-----|--------|----------|
+| A股 | T+1 | 有 | 100股 |
+| 港股 | T+0 | 无 | 1股 |
+| 美股 | T+0 | 无 | 1股 |
+
+---
+
+### 4.3 查询账户
+
+#### 获取指定市场账户
+```http
+GET /internal/agents/:agentId/portfolio?market=CN
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| market | string | CN/HK/US |
+
+#### 获取所有市场账户概览
+```http
+GET /internal/agents/:agentId/portfolios
 ```
 
 ---
 
-### 4.3 触发
+### 4.4 触发
 
 #### 触发 AI 思考 (定时任务调用)
 ```http

@@ -3,6 +3,7 @@
 import useSWR from 'swr';
 import { fetcher, cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useMarket } from '@/contexts/MarketContext';
 
 interface SentimentData {
   date: string;
@@ -45,26 +46,40 @@ interface LadderData {
 }
 
 export function MarketSentiment() {
+  const { market, marketLabel, marketFlag } = useMarket();
+  
+  // A股使用韭研数据，港股暂用基础数据
   const { data: sentiment } = useSWR<SentimentData>(
-    '/v1/market/sentiment',
+    market === 'CN' ? '/v1/market/sentiment' : null,
     fetcher,
     { refreshInterval: 300000 }
   );
   
+  const { data: overview } = useSWR<any>(
+    `/v1/market/overview?market=${market}`,
+    fetcher,
+    { refreshInterval: 60000 }
+  );
+  
   const { data: themes } = useSWR<ThemesData>(
-    '/v1/market/themes',
+    market === 'CN' ? '/v1/market/themes' : null,
     fetcher,
     { refreshInterval: 300000 }
   );
   
   const { data: ladder } = useSWR<LadderData>(
-    '/v1/market/ladder',
+    market === 'CN' ? '/v1/market/ladder' : null,
     fetcher,
     { refreshInterval: 300000 }
   );
   
   const sentimentIndex = sentiment?.sentiment?.index || 0;
   const sentimentLabel = sentiment?.sentiment?.label || '';
+  
+  // 优先使用 overview 的涨跌数据（更准确）
+  const upCount = overview?.upCount ?? sentiment?.sentiment?.upCount ?? 0;
+  const downCount = overview?.downCount ?? sentiment?.sentiment?.downCount ?? 0;
+  const flatCount = overview?.flatCount ?? sentiment?.sentiment?.flatCount ?? 0;
   
   // 情绪颜色
   const getSentimentColor = (index: number) => {
@@ -79,6 +94,64 @@ export function MarketSentiment() {
     return 'from-green-500/20 to-green-500/5';
   };
   
+  // 港股/美股简化视图
+  if (market === 'HK' || market === 'US') {
+    const marketInfo = market === 'HK' 
+      ? { rules: 'T+0', noLimit: '无涨跌停', hours: '9:30-12:00, 13:00-16:00' }
+      : { rules: 'T+0', noLimit: '无涨跌停', hours: '21:30-04:00 (北京时间)' };
+    
+    return (
+      <div className="card">
+        <div className="card-header border-b border-[var(--border-light)]">
+          <span>📊</span>
+          <span>{marketFlag} 市场概况</span>
+        </div>
+        
+        <div className="p-4 space-y-4">
+          {/* 涨跌分布 */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
+              <div className="text-lg font-bold text-up tabular-nums">
+                {upCount}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">上涨</div>
+            </div>
+            <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
+              <div className="text-lg font-bold text-[var(--text-secondary)] tabular-nums">
+                {flatCount}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">平盘</div>
+            </div>
+            <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
+              <div className="text-lg font-bold text-down tabular-nums">
+                {downCount}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">下跌</div>
+            </div>
+          </div>
+          
+          {/* 市场特色 */}
+          <div className="bg-[var(--bg-secondary)] rounded-lg p-3 space-y-2">
+            <div className="text-sm">
+              <span className="text-[var(--text-muted)]">交易规则：</span>
+              <span className="font-medium text-[var(--color-accent)]">{marketInfo.rules}</span>
+              <span className="text-[var(--text-muted)]"> · {marketInfo.noLimit}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-[var(--text-muted)]">交易时间：</span>
+              <span>{marketInfo.hours}</span>
+            </div>
+          </div>
+          
+          <div className="text-center text-sm text-[var(--text-muted)]">
+            {market === 'HK' ? '港股' : '美股'}情绪数据开发中...
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // A股完整视图
   return (
     <div className="card">
       <div className="card-header border-b border-[var(--border-light)]">
@@ -129,28 +202,26 @@ export function MarketSentiment() {
         </div>
         
         {/* 涨跌分布 */}
-        {sentiment?.sentiment && (
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
-              <div className="text-lg font-bold text-up tabular-nums">
-                {sentiment.sentiment.upCount}
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">上涨</div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
+            <div className="text-lg font-bold text-up tabular-nums">
+              {upCount}
             </div>
-            <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
-              <div className="text-lg font-bold text-[var(--text-secondary)] tabular-nums">
-                {sentiment.sentiment.flatCount}
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">平盘</div>
-            </div>
-            <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
-              <div className="text-lg font-bold text-down tabular-nums">
-                {sentiment.sentiment.downCount}
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">下跌</div>
-            </div>
+            <div className="text-xs text-[var(--text-muted)]">上涨</div>
           </div>
-        )}
+          <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
+            <div className="text-lg font-bold text-[var(--text-secondary)] tabular-nums">
+              {flatCount}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">平盘</div>
+          </div>
+          <div className="bg-[var(--bg-secondary)] rounded-lg p-2">
+            <div className="text-lg font-bold text-down tabular-nums">
+              {downCount}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">下跌</div>
+          </div>
+        </div>
         
         {/* 连板天梯 */}
         {ladder && (

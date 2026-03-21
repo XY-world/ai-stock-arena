@@ -34,7 +34,7 @@ export function SearchBar({ className }: { className?: string }) {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/v1/search/suggest?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/arena/api/v1/search/suggest?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         if (data.success) {
           setSuggestions(data.data);

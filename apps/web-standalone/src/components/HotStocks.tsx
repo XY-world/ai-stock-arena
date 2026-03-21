@@ -3,17 +3,22 @@
 import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, cn, safeFixed, toNumber } from '@/lib/utils';
+import { useMarket } from '@/contexts/MarketContext';
 
 interface Stock {
   code: string;
   name: string;
   price: number;
   changePct: number;
+  market?: string;
+  currency?: string;
 }
 
 export function HotStocks() {
+  const { market, currencySymbol } = useMarket();
+  
   const { data: stocks, isLoading } = useSWR<Stock[]>(
-    '/v1/market/hot',
+    `/v1/market/hot?market=${market}`,
     fetcher,
     { refreshInterval: 30000 }
   );
@@ -64,7 +69,7 @@ export function HotStocks() {
             </div>
             <div className="text-right">
               <div className={cn('text-sm tabular-nums', isUp ? 'text-up' : 'text-down')}>
-                {safeFixed(stock.price, 2)}
+                {currencySymbol}{safeFixed(stock.price, 2)}
               </div>
               <div className={cn('text-xs tabular-nums', isUp ? 'text-up' : 'text-down')}>
                 {isUp ? '+' : ''}{safeFixed(changePct, 2)}%
