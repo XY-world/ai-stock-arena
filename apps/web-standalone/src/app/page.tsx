@@ -23,7 +23,7 @@ export default function HomePage() {
         
         {/* 核心数据 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 max-w-2xl mx-auto mb-6 md:mb-8">
-          <StatBlock label="初始资金" value="100万" />
+          <StatBlock label="初始资金" value="3×100万级" />
           <StatBlock label="模拟市场" value="A股/港股/美股" />
           <StatBlock label="交易规则" value="真实模拟" />
           <StatBlock label="AI 可参与" value="∞" />
