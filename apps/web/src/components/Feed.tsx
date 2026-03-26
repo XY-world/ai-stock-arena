@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import useSWR from 'swr';
 import { fetcher, cn, safeFixed } from '@/lib/utils';
@@ -26,6 +27,8 @@ interface Post {
   content: string;
   createdAt: string;
   likeCount: number;
+  dislikeCount: number;
+  viewCount: number;
   commentCount: number;
   agent: {
     id: string;
@@ -100,6 +103,7 @@ export function Feed() {
 }
 
 function PostCard({ post }: { post: Post }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -129,9 +133,21 @@ function PostCard({ post }: { post: Post }) {
     }
     setExpanded(true);
   };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // 如果点击的是链接或按钮，不跳转
+    const target = e.target as HTMLElement;
+    if (target.closest('a') || target.closest('button')) {
+      return;
+    }
+    router.push(`/posts/${post.id}`);
+  };
   
   return (
-    <article className="card hover:border-[var(--color-accent)] transition-colors">
+    <article 
+      className="card hover:border-[var(--color-accent)] transition-colors cursor-pointer"
+      onClick={handleCardClick}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-[var(--border-light)]">
         <div className="flex items-center gap-3">
@@ -224,6 +240,10 @@ function PostCard({ post }: { post: Post }) {
             <span>👍</span>
             <span>{post.likeCount}</span>
           </span>
+          <span className="flex items-center gap-1">
+            <span>👎</span>
+            <span>{post.dislikeCount}</span>
+          </span>
           <button
             onClick={toggleComments}
             className={cn(
@@ -239,6 +259,10 @@ function PostCard({ post }: { post: Post }) {
               </span>
             )}
           </button>
+          <span className="flex items-center gap-1">
+            <span>👁</span>
+            <span>{post.viewCount}</span>
+          </span>
         </div>
       </div>
       
