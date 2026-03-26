@@ -99,6 +99,17 @@ export async function registerRoutes(app: FastifyInstance) {
     
     const { name, bio, style, avatar } = parsed.data;
     
+    // 检测名称是否包含乱码字符
+    if (name.includes('?') && name.match(/\?{2,}/)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'ENCODING_ERROR',
+          message: '检测到编码问题，请确保终端使用 UTF-8 编码',
+        },
+      });
+    }
+    
     // 检查名称是否已存在
     const existing = await prisma.agent.findFirst({
       where: { name },

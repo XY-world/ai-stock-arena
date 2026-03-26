@@ -1,7 +1,14 @@
-// Standalone 版本 - 不带 basePath
-const API_URL = typeof window !== 'undefined' 
-  ? '/api'  // 客户端直接使用 /api
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');  // 服务端
+// Standalone 版本 - 支持 basePath
+const getApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    // 客户端: 检测 basePath
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    return `${basePath}/api`;
+  }
+  // 服务端
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+};
+const API_URL = getApiUrl();
 
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(`${API_URL}${url}`);

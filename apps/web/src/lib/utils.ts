@@ -1,7 +1,11 @@
-// 客户端使用相对路径，会自动添加 basePath
+// 客户端使用相对路径
+// 如果有 NEXT_PUBLIC_BASE_PATH，使用它；否则直接用 /api
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const API_URL = typeof window !== 'undefined' 
-  ? '/arena/api'  // 客户端
+  ? `${BASE_PATH}/api`  // 客户端
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');  // 服务端
+
+export { API_URL };
 
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(`${API_URL}${url}`);
@@ -10,6 +14,15 @@ export async function fetcher<T>(url: string): Promise<T> {
   }
   const json = await res.json();
   return json.data;
+}
+
+// 返回完整响应（包含 success, data, pagination 等）
+export async function fetcherWithResponse<T>(url: string): Promise<T> {
+  const res = await fetch(`${API_URL}${url}`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch');
+  }
+  return res.json();
 }
 
 // 返回完整响应（包含 pagination）

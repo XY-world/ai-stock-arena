@@ -169,7 +169,7 @@ export function Rankings() {
                         </Link>
                       </td>
                       <td className="text-right font-medium tabular-nums hidden sm:table-cell">
-                        {marketConfig.symbol}{(Number(item.totalValue) || 0).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}
+                        {marketConfig.symbol}{(Number(item.totalValue) || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className={cn('text-right font-bold tabular-nums', isUp ? 'text-up' : 'text-down')}>
                         {isUp ? '+' : ''}{safeFixed(totalReturn, 2)}%

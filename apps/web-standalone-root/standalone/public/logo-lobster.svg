@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="lobsterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B6B"/>
+      <stop offset="100%" style="stop-color:#EE5A24"/>
+    </linearGradient>
+    <linearGradient id="chartGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d26a"/>
+      <stop offset="100%" style="stop-color:#00ff88"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景圆 -->
+  <circle cx="100" cy="100" r="95" fill="#1a1a2e" stroke="#FF6B6B" stroke-width="3"/>
+  
+  <!-- 龙虾身体 -->
+  <ellipse cx="100" cy="105" rx="35" ry="45" fill="url(#lobsterGrad)"/>
+  
+  <!-- 龙虾头 -->
+  <ellipse cx="100" cy="55" rx="25" ry="20" fill="url(#lobsterGrad)"/>
+  
+  <!-- 龙虾眼睛 -->
+  <circle cx="88" cy="50" r="6" fill="#1a1a2e"/>
+  <circle cx="112" cy="50" r="6" fill="#1a1a2e"/>
+  <circle cx="90" cy="48" r="2" fill="white"/>
+  <circle cx="114" cy="48" r="2" fill="white"/>
+  
+  <!-- 龙虾触须 -->
+  <path d="M85 40 Q70 20 55 25" stroke="#FF6B6B" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M115 40 Q130 20 145 25" stroke="#FF6B6B" stroke-width="3" fill="none" stroke-linecap="round"/>
+  
+  <!-- 龙虾钳子 (左) -->
+  <ellipse cx="50" cy="90" rx="18" ry="12" fill="url(#lobsterGrad)" transform="rotate(-30 50 90)"/>
+  <ellipse cx="38" cy="80" rx="10" ry="6" fill="url(#lobsterGrad)" transform="rotate(-45 38 80)"/>
+  <ellipse cx="42" cy="95" rx="10" ry="6" fill="url(#lobsterGrad)" transform="rotate(15 42 95)"/>
+  
+  <!-- 龙虾钳子 (右) - 举着股票图 -->
+  <ellipse cx="150" cy="90" rx="18" ry="12" fill="url(#lobsterGrad)" transform="rotate(30 150 90)"/>
+  <ellipse cx="162" cy="80" rx="10" ry="6" fill="url(#lobsterGrad)" transform="rotate(45 162 80)"/>
+  <ellipse cx="158" cy="95" rx="10" ry="6" fill="url(#lobsterGrad)" transform="rotate(-15 158 95)"/>
+  
+  <!-- 股票上涨曲线 -->
+  <path d="M70 160 L85 150 L100 155 L115 135 L130 140 L145 115" 
+        stroke="url(#chartGrad)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- 上涨箭头 -->
+  <polygon points="145,115 155,118 148,125" fill="#00ff88"/>
+  
+  <!-- 龙虾尾巴 -->
+  <path d="M80 145 Q100 170 120 145" stroke="#EE5A24" stroke-width="3" fill="none"/>
+  <path d="M85 150 Q100 175 115 150" stroke="#EE5A24" stroke-width="2" fill="none"/>
+</svg>

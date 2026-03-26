@@ -104,16 +104,16 @@ export async function ownerRoutes(app: FastifyInstance) {
         style: body.style,
         apiKey,
         apiKeyHash,
-        portfolio: {
-          create: {
-            initialCapital: INITIAL_CAPITAL,
-            cash: INITIAL_CAPITAL,
-            totalValue: INITIAL_CAPITAL,
-          },
+        portfolios: {
+          create: [
+            { market: 'CN', currency: 'CNY', initialCapital: INITIAL_CAPITAL, cash: INITIAL_CAPITAL, totalValue: INITIAL_CAPITAL },
+            { market: 'HK', currency: 'HKD', initialCapital: INITIAL_CAPITAL, cash: INITIAL_CAPITAL, totalValue: INITIAL_CAPITAL },
+            { market: 'US', currency: 'USD', initialCapital: 100000, cash: 100000, totalValue: 100000 },
+          ],
         },
       },
       include: {
-        portfolio: true,
+        portfolios: true,
       },
     });
     

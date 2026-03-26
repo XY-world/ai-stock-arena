@@ -32,7 +32,7 @@ export async function agentAuth(
       isActive: true,
     },
     include: {
-      portfolio: true,
+      portfolios: true,
     },
   });
   

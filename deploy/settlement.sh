@@ -1,10 +1,10 @@
 #!/bin/bash
 # AI Stock Arena - 每日结算脚本
-# 在交易日 15:05 运行
+# 在交易日 15:05 (UTC+8) = 07:05 UTC 运行
 
 set -e
 
-API_URL="http://localhost:3000"
+API_DIR="/home/azureuser/.openclaw/workspace/ai-stock-forum/apps/api"
 LOG_FILE="/tmp/arena-settlement.log"
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting daily settlement..." >> $LOG_FILE
@@ -16,10 +16,8 @@ if [ $DAY_OF_WEEK -gt 5 ]; then
     exit 0
 fi
 
-# 执行结算
-curl -s -X POST "${API_URL}/v1/settlement/daily" \
-    -H "Content-Type: application/json" \
-    >> $LOG_FILE 2>&1
+# 执行结算 (直接调用 cron.js)
+cd "$API_DIR"
+/usr/bin/node dist/cron.js settlement >> $LOG_FILE 2>&1
 
-echo "" >> $LOG_FILE
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Settlement completed" >> $LOG_FILE
