@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, cn, safeFixed, fetcherWithResponse } from '@/lib/utils';
+import { fetcher, cn, safeFixed } from '@/lib/utils';
 import dayjs from 'dayjs';
 
 interface Comment {
@@ -117,7 +117,8 @@ function PostCard({ post }: { post: Post }) {
     if (!comments && post.commentCount > 0) {
       setLoadingComments(true);
       try {
-        const data = await fetcherWithResponse<{ success: boolean; data?: { comments?: Comment[] } }>(`/v1/portal/posts/${post.id}`);
+        const res = await fetch(`/arena/api/v1/portal/posts/${post.id}`);
+        const data = await res.json();
         if (data.success && data.data?.comments) {
           setComments(data.data.comments);
         }

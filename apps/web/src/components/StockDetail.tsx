@@ -40,11 +40,17 @@ interface Indicators {
 interface Fundamental {
   code: string;
   name: string;
+  market?: string;
   valuation: {
     pe: number;
     pb: number;
     marketCap: number;
     marketCapFloat: number;
+    eps?: number;
+    high52w?: number;
+    low52w?: number;
+    dividend?: number;
+    dividendYield?: number;
   };
   price: {
     current: number;
@@ -185,32 +191,96 @@ export function StockDetail({ code }: { code: string }) {
             <div className="card-header">
               <span>📊</span>
               <span>估值数据</span>
+              {fundamental.market && (
+                <span className="ml-auto text-xs text-[var(--text-muted)]">
+                  {fundamental.market === 'HK' ? '港股' : fundamental.market === 'US' ? '美股' : 'A股'}
+                </span>
+              )}
             </div>
             <div className="p-4 grid grid-cols-2 gap-4">
+              {/* PE */}
               <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">
-                  {safeFixed(fundamental.valuation.pe)}
+                  {fundamental.valuation.pe ? safeFixed(fundamental.valuation.pe) : '--'}
                 </div>
                 <div className="text-xs text-[var(--text-muted)]">PE (市盈率)</div>
               </div>
-              <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">
-                  {safeFixed(fundamental.valuation.pb)}
+              
+              {/* PB (A股) 或 EPS (美股) 或 52周高低 (港股) */}
+              {fundamental.market === 'US' && fundamental.valuation.eps ? (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">
+                    ${safeFixed(fundamental.valuation.eps)}
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">EPS (每股收益)</div>
                 </div>
-                <div className="text-xs text-[var(--text-muted)]">PB (市净率)</div>
-              </div>
+              ) : fundamental.valuation.pb ? (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">
+                    {safeFixed(fundamental.valuation.pb)}
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">PB (市净率)</div>
+                </div>
+              ) : (fundamental.valuation.high52w || fundamental.valuation.low52w) ? (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-sm font-bold tabular-nums">
+                    <span className="text-up">{safeFixed(fundamental.valuation.high52w)}</span>
+                    <span className="text-[var(--text-muted)] mx-1">/</span>
+                    <span className="text-down">{safeFixed(fundamental.valuation.low52w)}</span>
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">52周高/低</div>
+                </div>
+              ) : (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-[var(--text-muted)] tabular-nums">--</div>
+                  <div className="text-xs text-[var(--text-muted)]">PB (市净率)</div>
+                </div>
+              )}
+              
+              {/* 市值 */}
               <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
                 <div className="text-lg font-bold tabular-nums">
-                  {safeFixed(fundamental.valuation.marketCap)}亿
+                  {fundamental.valuation.marketCap ? (
+                    fundamental.market === 'US' 
+                      ? `$${(fundamental.valuation.marketCap / 100000000).toFixed(0)}亿`
+                      : `${safeFixed(fundamental.valuation.marketCap)}亿`
+                  ) : '--'}
                 </div>
-                <div className="text-xs text-[var(--text-muted)]">总市值</div>
-              </div>
-              <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
-                <div className="text-lg font-bold tabular-nums">
-                  {safeFixed(fundamental.valuation.marketCapFloat)}亿
+                <div className="text-xs text-[var(--text-muted)]">
+                  {fundamental.market === 'HK' ? '市值(港元)' : fundamental.market === 'US' ? '市值(美元)' : '总市值'}
                 </div>
-                <div className="text-xs text-[var(--text-muted)]">流通市值</div>
               </div>
+              
+              {/* 流通市值 (A股) 或 股息率 (美股) */}
+              {fundamental.market === 'US' && fundamental.valuation.dividendYield !== undefined ? (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold tabular-nums">
+                    {fundamental.valuation.dividendYield ? `${safeFixed(fundamental.valuation.dividendYield)}%` : '--'}
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">股息率</div>
+                </div>
+              ) : fundamental.valuation.marketCapFloat ? (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold tabular-nums">
+                    {safeFixed(fundamental.valuation.marketCapFloat)}亿
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">流通市值</div>
+                </div>
+              ) : fundamental.valuation.high52w ? (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-sm font-bold tabular-nums">
+                    <span className="text-up">{safeFixed(fundamental.valuation.high52w)}</span>
+                    <span className="text-[var(--text-muted)] mx-1">/</span>
+                    <span className="text-down">{safeFixed(fundamental.valuation.low52w)}</span>
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">52周高/低</div>
+                </div>
+              ) : (
+                <div className="bg-[var(--bg-secondary)] rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-[var(--text-muted)] tabular-nums">--</div>
+                  <div className="text-xs text-[var(--text-muted)]">流通市值</div>
+                </div>
+              )}
             </div>
           </div>
         )}
