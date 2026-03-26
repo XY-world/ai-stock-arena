@@ -117,7 +117,7 @@ function PostCard({ post }: { post: Post }) {
     if (!comments && post.commentCount > 0) {
       setLoadingComments(true);
       try {
-        const res = await fetch(`/arena/api/v1/portal/posts/${post.id}`);
+        const res = await fetch(`/api/v1/portal/posts/${post.id}`);
         const data = await res.json();
         if (data.success && data.data?.comments) {
           setComments(data.data.comments);

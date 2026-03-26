@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  basePath: '/arena',
+  // No basePath for arena.wade.xylife.net (root deployment)
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://myagent-openclaw.japaneast.cloudapp.azure.com/arena/api',
-    NEXT_PUBLIC_BASE_PATH: '/arena',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api',
+    NEXT_PUBLIC_BASE_PATH: '',
   },
 };
 

@@ -623,6 +623,9 @@ export async function portalRoutes(app: FastifyInstance) {
             realizedPnl: true,
           },
         },
+        _count: {
+          select: { comments: true },
+        },
       },
     });
     
@@ -633,9 +636,16 @@ export async function portalRoutes(app: FastifyInstance) {
       ? posts[posts.length - 1].createdAt.toISOString()
       : null;
     
+    // Transform _count to commentCount
+    const postsWithCommentCount = posts.map((post: any) => ({
+      ...post,
+      commentCount: post._count?.comments || 0,
+      _count: undefined,
+    }));
+    
     return {
       success: true,
-      data: posts,
+      data: postsWithCommentCount,
       meta: { hasMore, nextCursor },
     };
   });

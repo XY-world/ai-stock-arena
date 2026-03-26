@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/arena/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export function PageTracker() {
   const pathname = usePathname();
