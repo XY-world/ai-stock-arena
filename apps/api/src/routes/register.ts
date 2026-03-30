@@ -15,6 +15,59 @@ const registerSchema = z.object({
   avatar: z.string().url().optional(),
 });
 
+// ============================================
+// Agent Name Validation (防乱码)
+// ============================================
+
+interface NameValidation {
+  valid: boolean;
+  reason?: string;
+}
+
+function isValidAgentName(name: string): NameValidation {
+  // 1. 检测连续问号 (乱码特征)
+  if (/\?{2,}/.test(name)) {
+    return { valid: false, reason: '检测到编码问题 (连续问号)，请确保终端使用 UTF-8 编码' };
+  }
+  
+  // 2. 检测问号结尾 (部分乱码)
+  if (/\?$/.test(name) && name.length > 3) {
+    return { valid: false, reason: '名称末尾不能是问号，可能是编码问题' };
+  }
+  
+  // 3. 检测 Unicode 替换字符 U+FFFD
+  if (name.includes('\uFFFD')) {
+    return { valid: false, reason: '名称包含无效 Unicode 字符 (U+FFFD)' };
+  }
+  
+  // 4. 检测其他常见乱码模式
+  // 锟斤拷 = GBK 解码 UTF-8 的典型乱码
+  if (/锟斤拷|烫烫烫|屯屯屯/.test(name)) {
+    return { valid: false, reason: '检测到 GBK/UTF-8 编码混乱，请检查终端编码设置' };
+  }
+  
+  // 5. 允许的字符白名单:
+  //    - 中文 (CJK Unified Ideographs)
+  //    - 中文扩展 A
+  //    - 日文平假名/片假名
+  //    - 字母、数字
+  //    - 常见符号: _ - · . ~ 空格
+  //    - 常见 emoji (可选，这里暂时不允许以避免问题)
+  const allowedPattern = /^[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ffa-zA-Z0-9_\-·.\s~\[\]()（）【】]+$/;
+  
+  if (!allowedPattern.test(name)) {
+    // 找出不允许的字符
+    const invalidChars = name.split('').filter(c => !allowedPattern.test(c));
+    const uniqueInvalid = [...new Set(invalidChars)].slice(0, 3).join(', ');
+    return { 
+      valid: false, 
+      reason: `名称包含不允许的字符: ${uniqueInvalid}。只能使用中文、字母、数字、下划线、连字符等` 
+    };
+  }
+  
+  return { valid: true };
+}
+
 // 限流：每 IP 每天最多注册 5 个 Agent
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -99,13 +152,15 @@ export async function registerRoutes(app: FastifyInstance) {
     
     const { name, bio, style, avatar } = parsed.data;
     
-    // 检测名称是否包含乱码字符
-    if (name.includes('?') && name.match(/\?{2,}/)) {
+    // 增强的名称校验 (防乱码)
+    const nameValidation = isValidAgentName(name);
+    if (!nameValidation.valid) {
       return reply.status(400).send({
         success: false,
         error: {
-          code: 'ENCODING_ERROR',
-          message: '检测到编码问题，请确保终端使用 UTF-8 编码',
+          code: 'INVALID_NAME',
+          message: nameValidation.reason,
+          hint: 'Windows 用户请运行: chcp 65001 切换到 UTF-8 编码',
         },
       });
     }
