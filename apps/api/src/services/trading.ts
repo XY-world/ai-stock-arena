@@ -23,11 +23,15 @@ const HK_SETTLEMENT_FEE_RATE = new Decimal('0.00002'); // 结算费: 十万2
 // 市场类型
 // ============================================
 
-type Market = 'CN' | 'HK';
+type Market = 'CN' | 'HK' | 'US';
 
 function getMarket(stockCode: string): Market {
   if (stockCode.startsWith('HK')) {
     return 'HK';
+  }
+  // 纯字母代码视为美股 (NIO, AAPL, TSLA)
+  if (/^[A-Z]{1,5}$/.test(stockCode)) {
+    return 'US';
   }
   return 'CN';
 }
@@ -36,15 +40,21 @@ function getExchange(stockCode: string): string {
   if (stockCode.startsWith('HK')) return 'HK';
   if (stockCode.startsWith('SH')) return 'SH';
   if (stockCode.startsWith('SZ')) return 'SZ';
+  // 美股默认 NASDAQ
+  if (/^[A-Z]{1,5}$/.test(stockCode)) return 'US';
   return 'SZ';
 }
 
 function getCurrency(market: Market): string {
-  return market === 'HK' ? 'HKD' : 'CNY';
+  if (market === 'HK') return 'HKD';
+  if (market === 'US') return 'USD';
+  return 'CNY';
 }
 
 function getCurrencySymbol(market: Market): string {
-  return market === 'HK' ? 'HK$' : '¥';
+  if (market === 'HK') return 'HK$';
+  if (market === 'US') return '$';
+  return '¥';
 }
 
 // ============================================
@@ -85,9 +95,14 @@ export class TradingService {
     
     // 1. 检查交易时间
     if (!this.isTradingTime(market)) {
-      const timeDesc = market === 'HK' 
-        ? '港股交易时间: 9:30-12:00, 13:00-16:00' 
-        : 'A股交易时间: 9:30-11:30, 13:00-15:00';
+      let timeDesc: string;
+      if (market === 'HK') {
+        timeDesc = '港股交易时间: 9:30-12:00, 13:00-16:00 (HKT)';
+      } else if (market === 'US') {
+        timeDesc = '美股交易时间: 9:30-16:00 (ET) / 北京时间 21:30-04:00';
+      } else {
+        timeDesc = 'A股交易时间: 9:30-11:30, 13:00-15:00';
+      }
       throw new TradingError('MARKET_CLOSED', `当前不在交易时间 (${timeDesc})`);
     }
     
@@ -97,7 +112,7 @@ export class TradingService {
         throw new TradingError('INVALID_SHARES', 'A股股数必须是 100 的正整数倍');
       }
     } else {
-      // 港股可以买任意数量 (简化处理，实际应检查每手股数)
+      // 港股和美股可以买任意数量
       if (shares <= 0) {
         throw new TradingError('INVALID_SHARES', '股数必须大于0');
       }
@@ -167,8 +182,8 @@ export class TradingService {
       );
     }
     
-    // T+0 或 T+1
-    const isT0 = market === 'HK';
+    // T+0 或 T+1 (港股和美股是 T+0，A股是 T+1)
+    const isT0 = market === 'HK' || market === 'US';
     
     // 事务
     const result = await this.prisma.$transaction(async (tx) => {
@@ -410,12 +425,18 @@ export class TradingService {
     }
     
     if (market === 'HK') {
-      // 港股: 9:30-12:00, 13:00-16:00
+      // 港股: 9:30-12:00, 13:00-16:00 (HKT = UTC+8)
       const isMorning = time >= 930 && time <= 1200;
       const isAfternoon = time >= 1300 && time <= 1600;
       return isMorning || isAfternoon;
+    } else if (market === 'US') {
+      // 美股: 9:30-16:00 ET (UTC-4/5)
+      // 简化处理: 北京时间 21:30-04:00 (夏令时) 或 22:30-05:00 (冬令时)
+      // 这里用宽松时间检查
+      const isUSHours = (time >= 2130 || time <= 500);
+      return isUSHours;
     } else {
-      // A股: 9:30-11:30, 13:00-15:00
+      // A股: 9:30-11:30, 13:00-15:00 (UTC+8)
       const isMorning = time >= 930 && time <= 1130;
       const isAfternoon = time >= 1300 && time <= 1500;
       return isMorning || isAfternoon;
@@ -428,6 +449,9 @@ export class TradingService {
   private calculateFees(stockCode: string, amount: Decimal, side: 'buy' | 'sell', market: Market) {
     if (market === 'HK') {
       return this.calculateHKFees(amount, side);
+    }
+    if (market === 'US') {
+      return this.calculateUSFees(amount, side);
     }
     return this.calculateCNFees(stockCode, amount, side);
   }
@@ -481,6 +505,33 @@ export class TradingService {
       commission: commission.toDecimalPlaces(2),
       stampTax: stampTax.toDecimalPlaces(2),
       transferFee: tradingFee.add(settlementFee).toDecimalPlaces(2), // 合并为 transferFee
+      total: total.toDecimalPlaces(2),
+    };
+  }
+  
+  /**
+   * 美股手续费
+   */
+  private calculateUSFees(amount: Decimal, side: 'buy' | 'sell') {
+    // 美股佣金: 0.005 美元/股，最低 1 美元，这里简化为 0.1% 费率
+    const US_COMMISSION_RATE = 0.001;
+    const US_COMMISSION_MIN = 1;
+    
+    let commission = amount.mul(US_COMMISSION_RATE);
+    commission = Decimal.max(commission, US_COMMISSION_MIN);
+    
+    // SEC 费用 (仅卖出): 约 $8 / $1,000,000
+    const secFee = side === 'sell' ? amount.mul(0.000008) : new Decimal(0);
+    
+    // TAF 费用: $0.000119/股，这里简化为 0.01%
+    const tafFee = amount.mul(0.0001);
+    
+    const total = commission.add(secFee).add(tafFee);
+    
+    return {
+      commission: commission.toDecimalPlaces(2),
+      stampTax: secFee.toDecimalPlaces(2),
+      transferFee: tafFee.toDecimalPlaces(2),
       total: total.toDecimalPlaces(2),
     };
   }

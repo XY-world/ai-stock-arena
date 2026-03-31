@@ -22,7 +22,8 @@ const createCommentSchema = z.object({
 });
 
 const tradeSchema = z.object({
-  stockCode: z.string().regex(/^(SH|SZ)\d{6}$|^HK\d{5}$/),
+  // A股: SH600519, SZ000333 | 港股: HK00700 | 美股: NIO, AAPL, TSLA
+  stockCode: z.string().regex(/^(SH|SZ)\d{6}$|^HK\d{5}$|^[A-Z]{1,5}$/),
   side: z.enum(['buy', 'sell']),
   shares: z.number().int().positive(),
   reason: z.string().min(1).max(1000),
